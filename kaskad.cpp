@@ -2,7 +2,7 @@
 
 //divergence under small Reynolds
 
-//structural functions(along rectangle)
+//structural functions(along rectangle with periodic condtions)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,10 +12,13 @@
 
 # define  Nx   10
 # define  Ny   10
-# define  Nz   10
+# define  Nz   11
 # define  EPS  1e-9
 # define STEP (0.0001*Re)
 # define uplevel 100000.
+# define Noise 0.01
+# define norm(a,b,c) (a*a+b*b+c*c)
+# define min_d min(min(dx,dy),dz)
 //# define LEN (min(k,Nz+1-k)*dz)
 //# define LEN (min(k,Nz+1-k)*dz*sqrt(1-2.*min(k,Nz+1-k)/(Nz+1)))
 //#define LEN 1
@@ -29,9 +32,9 @@
  double p[2][Nx+2][Ny+2][Nz+2],
 		 nut[Nx+2][Ny+2][Nz+2];
 		 diver[Nx+1][Ny+1][Nz+1];
- double s_func[Nx+Ny+Nz];
- long num_points[Nx+Ny+Nz];
- double Re=1, gamma ;
+ double s_func[Nz+2][Nx/2+Ny/2+Nz];
+ long num_points[Nx/2+Ny/2+Nz];
+ double Re=100000000, gamma ;
 
  double tm, dx,dy,dz, lx,ly,lz, tmmax,divmax ;
 
@@ -51,15 +54,7 @@ FILE *ff;
 return(ff);
 }
 
-double napr(double dqx,double dqy,double dqz,double nx,double ny,double nz)
-//scalar product of dq vector and guide vector n
-{
-double mod=sqrt(nx*nx+ny*ny+nz*nz);
-if(mod==0) return(0);
-		else return ((dqx*nx+dqy*ny+dqz*nz)/mod);
-}//napr
-
-void fill_num_points()//filling of number points array
+/*void fill_num_points()//filling of number points array
 {
 int i,j,k,l,m,n,dist;
 double d;
@@ -78,42 +73,40 @@ for(i=1;i<=Nx;i++)
 						 dist=floor(d+0.5);
 						 num_points[dist]++;
 						 }
-}//fill_num_points
+}//fill_num_points*/
 
 void struct_func(int q,int ind)//structural function of order q
 {
 long nn=ind;
-int i,j,k,l,m,n,i_,j_,k_,dist;
-double d;
-for(i=0;i<=Nx+Ny+Nz-1;i++)  s_func[i] =  0;
-for(i=1;i<=Nx;i++)
+int i,j,k,l,m,n,dist;
+double d,rx,ry,rz;
+for(k=1;k<=Nz;k++)
+	{
+for(i=0;i<=Nx/2+Ny/2+Nz-1;i++) s_func[k][i] = num_points[i] = 0;
+	for(i=1;i<=Nx;i++)
 	for(j=1;j<=Ny;j++)
-		for(k=1;k<=Nz;k++)
 			for(l=1;l<=Nx;l++)
 				for(m=1;m<=Ny;m++)
 					for(n=1;n<=Nz;n++)
 						 {
-						 d = sqrt((l-i)*(l-i)+(m-j)*(m-j)+(n-k)*(n-k));
-						 d = (d>EPS)?d:1;
-						 d = log(d)*(Nx+Ny+Nz)/log(sqrt(Nx*Nx+Ny*Ny+Nz*Nz));
+						 if ((i==l)&&(j==m)&&(k==n)) continue;
+						 rx = min( abs(l-i),Nx-abs(l-i) )*dx;
+						 ry = min( abs(m-j),Nx-abs(m-j) )*dy;
+						 rz = abs(n-k)*dz;
+						 d = sqrt(rx*rx+ry*ry+rz*rz);
+						 d = 2*log(d/min_d)/log(2);
 						 //(per wave number add "minus")
-						 dist=floor(d+0.5);
-						 i_ = l;
-						 j_ = m;
-						 k_ = n;
-/*						 s_func[dist]+=pow(napr(vx[nn][i_][j_][k_]-vx[nn][i][j][k],
-										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
-										 vz[nn][i_][j_][k_]-vz[nn][i][j][k],
-										 vx[nn][i_][j_][k_]-vx[nn][i][j][k],
-										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
-										 vz[nn][i_][j_][k_]-vz[nn][i][j][k]),q);*/
-						 s_func[dist]+=pow(napr(vx[nn][i_][j_][k_]-vx[nn][i][j][k],
-										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
-										 vz[nn][i_][j_][k_]-vz[nn][i][j][k],
-										 l,m,n),q);
+						 dist=floor(d);
+						 s_func[k][dist]+=pow(
+									norm(vx[nn][l][m][n]-vx[nn][i][j][k],
+										 vy[nn][l][m][n]-vy[nn][i][j][k],
+										 vz[nn][l][m][n]-vz[nn][i][j][k]),
+										 q/2.);
+						 num_points[dist]++;
 						 }
-for(i=0;i<=Nx+Ny+Nz;i++)
-	if(num_points[i]) s_func[i]=(s_func[i]/num_points[i]);
+for(i=0;i<=Nx/2+Ny/2+Nz-1&&num_points[i];i++)
+	s_func[k][i]=(s_func[k][i]/num_points[i]);
+	 }//"for" per layers
 }//struct_func
 
 void velocitybounder(int ind)  //boundary conditions on velocities
@@ -210,9 +203,9 @@ void printing(int ind)
 	fprintf(fnu,"%0.5f}\n",avernu[Nz]);*/
 	//putting structural functions to file
 	struct_func(2,ind);
-	fprintf(fsf,"{%0.6f",s_func[0]);
-	for(k=1;k<=Nx+Ny+Nz;k++)
-		if(num_points[k]) fprintf(fsf,",%0.6f",s_func[k]);
+	fprintf(fsf,"{%0.6f",s_func[1][0]);
+	for(k=1;k<=Nx/2+Ny/2+Nz-1&&num_points[k];k++)
+		fprintf(fsf,",%0.6f",s_func[1][k]);
 	fprintf(fsf,"}\n");
 
 	 if(kbhit()&&getch()=='q') konez=true;
@@ -357,13 +350,14 @@ void main()
 	for(j=0;j<=Ny+1;j++)
 		for(k=0;k<=Nz+1;k++)
 				 {
-				 vx[0][i][j][k]=0.0*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vy[0][i][j][k]=0.0*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vz[0][i][j][k]=0.0*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vx[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX
+								+ 1 - 4./Nz/Nz*(k-1-Nz/2)*(k-1-Nz/2);
+				 vy[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vz[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
 				 nut[i][j][k]= 1./Re;
 				 }
-	fill_num_points();
+//	fill_num_points();
 
 	fv = prepout("vv.dat");
 	fprintf(fv,"{");
