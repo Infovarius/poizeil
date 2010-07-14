@@ -1,16 +1,16 @@
-//unleading to v=1
+//don't lead to v=1, but with gradient periodic condition
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   3
-# define  Ny   3
-# define  Nz   3
+# define  Nx   11
+# define  Ny   11
+# define  Nz   11
 # define  EPS  1e-20
 
-float dt,
+double dt,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -77,17 +77,17 @@ int  i,j,k,n0,n1 ;
 
 long ns;
 
-float p[2][Nx+2][Ny+2][Nz+2],
+double p[2][Nx+2][Ny+2][Nz+2],
 		 nut[Nx+2][Ny+2][Nz+2],
 		 div[Nx+1][Ny+1][Nz+1];
 
- float p1, p2;//pressure on the ends
+ double p1, p2;//pressure on the ends
 
- float Re, gamma /*, varrand, sp[NTT]*/;
+ double Re, gamma ;
 
- float epsp, epsvx,epsvy,epsvz ;// disv, enk, enki;
+ double epsp, epsvx,epsvy,epsvz ;
 
- float tm, dx,dy,dz, lx,ly,lz, tmmax, vxmax,vymax,vzmax ;
+ double tm, dx,dy,dz, lx,ly,lz, tmmax, vxmax,vymax,vzmax ;
 
 /*============ Initial condition ==============*/
 
@@ -95,7 +95,7 @@ float p[2][Nx+2][Ny+2][Nz+2],
 
   tmmax=50.0;
   tm = 0;
-  dt = 1e-05;
+  dt = 1e-04;
 
   lx = 1; lz = ly= 0.5; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
@@ -121,14 +121,13 @@ float p[2][Nx+2][Ny+2][Nz+2],
 
 	while(tm<tmmax)
 	{
-	 /* printf("\n %9f",tm);*/
 
 	  n0 = ns%2;
 	  n1 = (ns+1)%2;
 
 /*------------ Step 0 Boundary condition --------------------*/
 
-velocitybounder(0);
+velocitybounder(n0);
 
 /*------------ Step I (velocities without pressure) ------------------*/
 for(i=1;i<=Nx;i++)
@@ -210,12 +209,12 @@ velocitybounder(n1);
 	  p[n1][i][Ny+1][k] = p[n1][i][1][k];
 		}
 
-				//strained conditions on stream surfaces
+				//gradient periodic conditions on stream surfaces
 		for(j=0;j<=Ny+1;j++)
 	  for(k=0;k<=Nz+1;k++)
 	 {
-	  p[n1][0][j][k]= 2*p1-p[n1][1][j][k];
-	  p[n1][Nx+1][j][k]= 2*p2-p[n1][Nx][j][k];
+	  p[n1][0][j][k]= p1+p[n1][Nx][j][k]-p2+(p2-p1)/Nx;
+	  p[n1][Nx+1][j][k]= p2+p[n1][1][j][k]-p1-(p2-p1)/Nx;
 	 }
 
 //correction of velocities by pressure
@@ -256,7 +255,7 @@ velocitybounder(n1);
 				 if(vymax < fabs(vy[n1][i][j][k])) vymax = fabs(vy[n1][i][j][k]);
 				 if(vzmax < fabs(vz[n1][i][j][k])) vzmax = fabs(vz[n1][i][j][k]);
 				 if(epsvx < fabs(vx[n1][i][j][k]-vx[n0][i][j][k]))
-					 epsvx = fabs(vx[ns1][i][j][k]-vx[n0][i][j][k]);
+					 epsvx = fabs(vx[n1][i][j][k]-vx[n0][i][j][k]);
 				 if(epsvy < fabs(vy[n1][i][j][k]-vy[n0][i][j][k]))
 					 epsvy = fabs(vy[n1][i][j][k]-vy[n0][i][j][k]);
 				 if(epsvz < fabs(vz[n1][i][j][k]-vz[n0][i][j][k]))
@@ -272,6 +271,7 @@ velocitybounder(n1);
 
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
 			vxmax>1.0/EPS || vymax>1.0/EPS ||vzmax>1.0/EPS) break;
+
  //	 if(kbhit()) break;
 	  ns++;
 	  tm+=dt;
