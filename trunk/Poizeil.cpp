@@ -1,13 +1,17 @@
 //working version:
-//gradient periodic condition+max v=1+
+//gradient periodic condition+max v=1+print to file
+
+/*rending in Mathematics by string:
+ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
+	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   5
-# define  Ny   5
+# define  Nx   4
+# define  Ny   4
 # define  Nz   10
 # define  EPS  1e-15
 
@@ -17,15 +21,14 @@ double dt,
 		 vz[2][Nx+2][Ny+2][Nz+2];
 FILE  *ff;
 
-/*void prepout(char *x)  //opening of file to ff
+void prepout(char *x)  //opening of file to ff
 {
-  strcat(x,OUTNAME);
   if ((ff = fopen (x,"w+"))==NULL)
 	 {
 		printf ("Can't open file %s !\n",x);
 		exit(-1);
 	 }
-} */
+}
 
 void velocitybounder(int ind)  //boundary conditions on velocities
 {
@@ -110,13 +113,14 @@ double p[2][Nx+2][Ny+2][Nz+2],
 				 {
 				 vx[0][i][j][k]=vy[0][i][j][k]=vz[0][i][j][k]=0;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
-				 nut[i][j][k]= 0.0; //constant for a while
+				 nut[i][j][k]= .0; //constant for a while
 				 }
 
-/*   prepout("vv.dat");
-	for (j=1; j<=Ny; j++)
-	  fprintf (ff,"%e %e %e\n",dy*(j-0.5),vx[0][Nx%2][j],vy[0][5][j]);
-	fclose (ff);*/
+	prepout("vv.dat");
+	fprintf(ff,"{");
+	for(k=1;k<=Nz-1;k++)
+		fprintf(ff,"%g,",vx[0][Nx/2][Ny/2][k]);
+	fprintf(ff,"%g}\n",vx[0][Nx/2][Ny/2][Nz]);
 
 /*=================== Main block ====================================*/
 
@@ -267,7 +271,12 @@ velocitybounder(n1);
 		 clrscr();
 		 printf("\r %f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
 		 printf("             %e %e %e\n",vxmax,vymax,vzmax);
-//		 if(getch()=='q')break;
+	fprintf(ff,"{");
+	for(k=1;k<=Nz-1;k++)
+		fprintf(ff,"%g,",vx[n0][Nx/2][Ny/2][k]);
+	fprintf(ff,"%g}\n",vx[n0][Nx/2][Ny/2][Nz]);
+
+	 if(kbhit()&&getch()=='q')break;
 	 }
 
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
@@ -282,5 +291,5 @@ velocitybounder(n1);
 	for(k=1;k<=Nz;k++)
 		printf("%g\n",vx[n0][Nx/2][Ny/2][k]);
 	putch(getch());
-
-															 }//main
+	fclose(ff);
+}//main
