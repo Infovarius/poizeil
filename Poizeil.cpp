@@ -12,12 +12,17 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   4
-# define  Ny   4
-# define  Nz   60
-# define  EPS  1e-15
+# define  Nx   10
+# define  Ny   10
+# define  Nz   40
+# define  EPS  1e-9
+# define STEP 0.01
+//# define LEN (min(k,Nz-k)*dz)
+# define LEN (min(k,Nz-k)*dz*sqrt(1-2*min(k,Nz-k)/Nz))
+//#define LEN 10
 
- double dt,
+
+ double dt=1e-5,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -124,7 +129,8 @@ void printing(int ind)
 
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
-			vxmax>100.0 || vymax>100.0 ||vzmax>100.0) konez=true;
+			vxmax>100.0 || vymax>100.0 ||vzmax>100.0)
+			konez=true;
 
  }    //printing
 
@@ -244,7 +250,7 @@ void main()
 {
  long ns;
  int i,j,k;
- double mn=15;
+ double mn=200;
 
 /*============ Initial condition ==============*/
 
@@ -252,7 +258,6 @@ void main()
 
   tmmax=500.0;
   tm = 0;
-  dt = 1e-04;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
@@ -301,9 +306,9 @@ void main()
 		 diver[i][j][k] = (vx[ns%2][i+1][j][k]-vx[ns%2][i-1][j][k])/(2*dx)+
 				 (vy[ns%2][i][j+1][k]-vy[ns%2][i][j-1][k])/(2*dy)+
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
-		 divmax=max(divmax,(double)abs(diver[i][j][k]));
+		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-	 if(!(ns%100))
+	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
 	 {
 	 printing((ns+1)%2);
 	 }
@@ -311,38 +316,25 @@ void main()
 	  ns++;
 	  tm+=dt;
 	}
+while(kbhit())putch(getch());
 
-	printf("\n the end of initial iterations, press any key to continue\n");
-	putch(getch());
+printf("\n the end of initial iterations, press any key to continue\n");
+//	putch(getch());
 
 konez = false;
-double dop=2;
-dop=3;
 //model of Prandtl iterations
-	while(tm<tmmax+(dop=0) && ! konez)
+	while(tm<tmmax && ! konez)
 	{
-	dop=1;
 	 step_of_time(ns);
 //correction nut in Prandtl model
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=1;k<=Nz;k++)
-				 {
-				 dop=k;
-				 dop=1;
-				 dop=min(k,Nz-k)*dz;
-				 dop=pow(min(k,Nz-k)*dz,2);
-				 dop=abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
-				 nut[i][j][k]=pow(min(k,Nz-k)*dz,2);
-				 nut[i][j][k]*=(min(k,Nz-k)>Nz/3?
+				 nut[i][j][k]=1+mn*pow(LEN,2)*
+					(min(k,Nz-k)*0>Nz/3?
 						vx[(ns+1)%2][i][j][k]:
-						abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz)
+						fabs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz)
 						);
-				 nut[i][j][k]*=mn;
-				 nut[i][j][k]+=1;
-				 //nut[i][j][k]=1+mn*pow(min(k,Nz-k)*dz,2)*
-				 //	abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
-				 }
 	 divmax = 0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
@@ -351,9 +343,9 @@ dop=3;
 		 diver[i][j][k] = (vx[ns%2][i+1][j][k]-vx[ns%2][i-1][j][k])/(2*dx)+
 				 (vy[ns%2][i][j+1][k]-vy[ns%2][i][j-1][k])/(2*dy)+
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
-		 divmax=max(divmax,(double)abs(diver[i][j][k]));
+		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-	 if(!(ns%100))
+	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
 	 {
 	 printing((ns+1)%2);
 	 }
