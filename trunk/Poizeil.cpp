@@ -6,6 +6,8 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
 
 //other structuring and Prandtl's models
+
+//corrected error with no-symmetric Nz-k (changed to Nz+1-k)
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -14,15 +16,15 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 
 # define  Nx   10
 # define  Ny   10
-# define  Nz   39
+# define  Nz   60
 # define  EPS  1e-9
-# define STEP 0.01
-//# define LEN (min(k,Nz-k)*dz)
-# define LEN (min(k,Nz-k)*dz*sqrt(1-2*min(k,Nz-k)/Nz))
-//#define LEN 10
+# define STEP 0.05
+//# define LEN (min(k,Nz+1-k)*dz)
+//# define LEN (min(k,Nz+1-k)*dz*sqrt(1-2.*min(k,Nz+1-k)/(Nz+1)))
+#define LEN 1
 
 
- double dt=1e-5,
+ double dt=10e-5,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -30,7 +32,7 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
  double p[2][Nx+2][Ny+2][Nz+2],
 		 nut[Nx+2][Ny+2][Nz+2];
 		 diver[Nx+1][Ny+1][Nz+1];
- double Re, gamma ;
+ double Re, gamma, ksi;
 
  double tm, dx,dy,dz, lx,ly,lz, tmmax,divmax ;
 
@@ -265,7 +267,7 @@ void main()
 {
  long ns;
  int i,j,k;
- double mn=200;
+ double mn=1;
 
 /*============ Initial condition ==============*/
 
@@ -278,7 +280,10 @@ void main()
 
   gamma = 0.01;
 
-  p1 = 8*lx/(lz*Re) ; p2 = 0;
+  ksi= 15;
+
+//  p1 = 8*lx/(lz*Re) ; p2 = 0;
+  p1 = 4*ksi*ksi/Re/(cosh(ksi)-1)*lx/lz; p2 = 0;
 
   ns = 0;
 
@@ -290,7 +295,8 @@ void main()
 				 vy[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 vz[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
-				 nut[i][j][k]= 1;
+	 //			 nut[i][j][k]= 1./Re;
+				 nut[i][j][k]= ksi*(2*(k-0.5)*dz-1)/sinh(ksi*(2*(k-0.5)*dz-1))/Re;
 				 }
 
 	fv = prepout("vv.dat");
@@ -331,7 +337,9 @@ void main()
 	  ns++;
 	  tm+=dt;
 	}
-while(kbhit())putch(getch());
+
+
+/*while (kbhit()) putch(getch());
 
 printf("\n the end of initial iterations, press any key to continue\n");
 //	putch(getch());
@@ -346,7 +354,7 @@ konez = false;
 	for(j=0;j<=Ny+1;j++)
 		for(k=1;k<=Nz;k++)
 				 nut[i][j][k]=1+mn*pow(LEN,2)*
-					(min(k,Nz-k)*0>Nz/3?
+					(min(k,Nz-k)>Nz/3*0?
 						vx[(ns+1)%2][i][j][k]:
 						fabs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz)
 						);
@@ -367,7 +375,7 @@ konez = false;
 
 	  ns++;
 	  tm+=dt;
-	}
+	}*/
 
 	printf("\n The End \n");
 	putch(getch());
