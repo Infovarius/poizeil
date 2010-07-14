@@ -1,0 +1,7 @@
+USEUNIT("kaskad+flux.cpp");
+USEUNIT("struct_func.cpp");
+USEUNIT("integrating.cpp");
+//---------------------------------------------------------------------------
+This file is used by the project manager only and should be treated like the project file
+
+main
