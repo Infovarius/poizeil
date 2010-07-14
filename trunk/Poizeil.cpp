@@ -1,19 +1,23 @@
 //working version:
 //gradient periodic condition+max v=1+print to file
-
 /*rending in Mathematics by string:
 ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
+
+//turbulence constant nu
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   4
-# define  Ny   4
+# define  Nx   10
+# define  Ny   10
 # define  Nz   10
 # define  EPS  1e-15
+# define min(x,y) (x>y)?y:x
+# define abs(x)  (x>0)?x:-x
 
 double dt,
 		 vx[2][Nx+2][Ny+2][Nz+2],
@@ -87,11 +91,11 @@ double p[2][Nx+2][Ny+2][Nz+2],
 
  double p1, p2;//pressure on the ends
 
- double Re, gamma ;
+ double Re, gamma ,ksi, mn;
 
  double epsp, epsvx,epsvy,epsvz ;
 
- double tm, dx,dy,dz, lx,ly,lz, tmmax, vxmax,vymax,vzmax ;
+ double tm, dx,dy,dz, lx,ly,lz, tmmax, vxmax,vymax,vzmax,divmax;
 
 /*============ Initial condition ==============*/
 
@@ -105,7 +109,10 @@ double p[2][Nx+2][Ny+2][Nz+2],
 
   p1 = 8*lx/(lz*Re); p2 = 0;
 
-  gamma = 0.001; ns = 0;
+  gamma = 0.001; ksi = 10;
+//  mn = Re*(p1-p2)/lx*(1-coshl(ksi))/ksi;
+mn=0.01;
+  ns = 0;
 
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
@@ -113,9 +120,14 @@ double p[2][Nx+2][Ny+2][Nz+2],
 				 {
 				 vx[0][i][j][k]=vy[0][i][j][k]=vz[0][i][j][k]=0;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
-				 nut[i][j][k]= .0; //constant for a while
+				 nut[i][j][k]=.0;// mn*(2*(k-0.5)*dz-1)/sinhl(ksi*(2*(k-0.5)*dz-1));
 				 }
 
+/*  for(i=0;i<=Nx+1;i++)
+	for(j=0;j<=Ny+1;j++)
+		for(k=0;k<=Nz+1;k++)
+				 nut[i][j][k]=mn*min(k,Nz-k)*min(k,Nz-k)*dz*dz*
+					abs((vx[0][i][j][k+1]-vx[0][i][j][k-1])/2/dz);*/
 	prepout("vv.dat");
 	fprintf(ff,"{");
 	for(k=1;k<=Nz-1;k++)
@@ -180,6 +192,7 @@ velocitybounder(n1);
 
 /*------------ Step II Divergention---------------------------*/
 
+	divmax=0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
 		 for(k=1;k<=Nz;k++)
@@ -187,6 +200,7 @@ velocitybounder(n1);
 		 div[i][j][k] = (vx[n1][i+1][j][k]-vx[n1][i-1][j][k])/(2*dx)+
 				 (vy[n1][i][j+1][k]-vy[n1][i][j-1][k])/(2*dy)+
 				 (vz[n1][i][j][k+1]-vz[n1][i][j][k-1])/(2*dz);
+		 divmax=max(divmax,abs(div[i][j][k]));
 		 }
 
 /*------------ Step III (counting pressure)---------------------------*/
@@ -231,6 +245,13 @@ velocitybounder(n1);
 		 vy[n1][i][j][k] -= dt*(p[n1][i][j+1][k]-p[n1][i][j-1][k])/(2*dy);
 		 vz[n1][i][j][k] -= dt*(p[n1][i][j][k+1]-p[n1][i][j][k-1])/(2*dz);
 			  }
+//correction nut in Prandtl model
+/*  for(i=0;i<=Nx+1;i++)
+	for(j=0;j<=Ny+1;j++)
+		for(k=0;k<=Nz+1;k++)
+				 nut[i][j][k]=mn*min(k,Nz-k)*min(k,Nz-k)*dz*dz*
+					abs((vx[n1][i][j][k+1]-vx[n1][i][j][k-1])/2/dz);*/
+
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
 		 for(k=1;k<=Nz;k++)
@@ -270,7 +291,7 @@ velocitybounder(n1);
 			 }
 		 clrscr();
 		 printf("\r %f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
-		 printf("             %e %e %e\n",vxmax,vymax,vzmax);
+		 printf("             %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
 	fprintf(ff,"{");
 	for(k=1;k<=Nz-1;k++)
 		fprintf(ff,"%g,",vx[n0][Nx/2][Ny/2][k]);
