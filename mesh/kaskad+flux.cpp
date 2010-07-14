@@ -4,27 +4,30 @@
 
 //structural functions(along rectangle with periodic condtions)
 # include "mesh.h"
+typedef double mesh_arr[Nx+2][Ny+2][Nz+2];
 
 # define  EPS  1e-9
-# define STEP (1)
-# define uplevel 100000.
-# define Noise 0.01
+# define STEP (0.1)
+# define uplevel 10000.
+# define Noise 0.0
 
 # include "macros.h"
 
-# define maschtab 10000000
+# define maschtab 00
 # define modul(a,b,c) (sqrt(norm(a,b,c)))
 
- double Re = 100000;
+//# include "integrating.cpp"
 
- double dt=5e-3,
+ double Re = 100000000;
+
+ double dt=5e-4,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
 
  double p[2][Nx+2][Ny+2][Nz+2],
-		 nut[Nx+2][Ny+2][Nz+2],
-		 diver[Nx+1][Ny+1][Nz+1];
+		 nut[Nx+2][Ny+2][Nz+2];
+
  double s_func[Nz+2][Nx/2+Ny/2+Nz];
  long num_points[Nx/2+Ny/2+Nz];
  double gamma ;
@@ -87,48 +90,49 @@ for(i=0;i<=Nx+1;i++)
             nut[i][j][k] = (1. + maschtab * flux)/Re;
             }
 dt = 0.2*dx * dx*Re/(1.+ maschtab*maxflux);
+if(dt>0.1) dt = 0.1;
 }
 
 
-void velocitybounder(int ind)  //boundary conditions on velocities
+void velocitybounder(mesh_arr Vx, mesh_arr Vy, mesh_arr Vz)  //boundary conditions on velocities
 {
 int i,j,k;
 			 //sticking conditions on horizontal surfaces
  for(i=1;i<=Nx;i++)
 	  for(j=1;j<=Ny;j++)
 	{
-	 vx[ind][i][j][0] = -vx[ind][i][j][1];
-	 vy[ind][i][j][0] = -vy[ind][i][j][1];
-	 vz[ind][i][j][0] = -vz[ind][i][j][1];
+	 Vx[i][j][0] = -Vx[i][j][1];
+	 Vy[i][j][0] = -Vy[i][j][1];
+	 Vz[i][j][0] = -Vz[i][j][1];
 
-	 vx[ind][i][j][Nz+1] = -vx[ind][i][j][Nz];
-	 vy[ind][i][j][Nz+1] = -vy[ind][i][j][Nz];
-	 vz[ind][i][j][Nz+1] = -vz[ind][i][j][Nz];
+	 Vx[i][j][Nz+1] = -Vx[i][j][Nz];
+	 Vy[i][j][Nz+1] = -Vy[i][j][Nz];
+	 Vz[i][j][Nz+1] = -Vz[i][j][Nz];
 	}
 			 //periodic conditions on vertical surfaces
   for(i=1;i<=Nx;i++)
 	  for(k=1;k<=Nz;k++)
 	 {
-	 vx[ind][i][0][k] = vx[ind][i][Ny][k];
-	 vy[ind][i][0][k] = vy[ind][i][Ny][k];
-	 vz[ind][i][0][k] = vz[ind][i][Ny][k];
+	 Vx[i][0][k] = Vx[i][Ny][k];
+	 Vy[i][0][k] = Vy[i][Ny][k];
+	 Vz[i][0][k] = Vz[i][Ny][k];
 
-	 vx[ind][i][Ny+1][k] = vx[ind][i][1][k];
-	 vy[ind][i][Ny+1][k] = vy[ind][i][1][k];
-	 vz[ind][i][Ny+1][k] = vz[ind][i][1][k];
+	 Vx[i][Ny+1][k] = Vx[i][1][k];
+	 Vy[i][Ny+1][k] = Vy[i][1][k];
+	 Vz[i][Ny+1][k] = Vz[i][1][k];
 	 }
 
 			 //periodic conditions on stream surfaces
 	for(j=1;j<=Ny;j++)
 		for(k=1;k<=Nz;k++)
 	 {
-	 vx[ind][0][j][k] = vx[ind][Ny][j][k];
-	 vy[ind][0][j][k] = vy[ind][Ny][j][k];
-	 vz[ind][0][j][k] = vz[ind][Ny][j][k];
+	 Vx[0][j][k] = Vx[Ny][j][k];
+	 Vy[0][j][k] = Vy[Ny][j][k];
+	 Vz[0][j][k] = Vz[Ny][j][k];
 
-	 vx[ind][Ny+1][j][k] = vx[ind][1][j][k];
-	 vy[ind][Ny+1][j][k] = vy[ind][1][j][k];
-	 vz[ind][Ny+1][j][k] = vz[ind][1][j][k];
+	 Vx[Ny+1][j][k] = Vx[1][j][k];
+	 Vy[Ny+1][j][k] = Vy[1][j][k];
+	 Vz[Ny+1][j][k] = Vz[1][j][k];
 	 }
 } //velocitybounder
 
@@ -171,7 +175,7 @@ for(k=1;k<=Nz;k++)
 		}
 
 clrscr();
-printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
+printf("\r %9f    %e %e %e %e\n",tm,epsvx,epsvy,epsvz,epsp);
 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,dt);
 	//putting velocities to file
         fv = prepout("vv.dat",ns);
@@ -200,119 +204,122 @@ printf("              %e %e %e %e\n",vxmax,vymax,vzmax,dt);
 			konez=true;
          if(dt>0.5*min_d/modul(vxmax,vymax,vzmax))
                dt = 0.5*min_d/modul(vxmax,vymax,vzmax);
-         if(dt<1e-20) konez=true;      
-
+         if(dt<1e-20) konez=true;
+         if(dt>0.1) dt = 0.1;
 } //printing
 
-void step_of_time(int ns)      //one of the time steps of calculation
-
+void next_layer(  mesh_arr VxOld, mesh_arr VxNew,
+                  mesh_arr VyOld, mesh_arr VyNew,
+                  mesh_arr VzOld, mesh_arr VzNew,
+                  mesh_arr pOld,  mesh_arr pNew     )
+     //calculating next velocities
 {
- int n0 = ns%2, n1 = (ns+1)%2;
  int  i,j,k ;
+ double diver[Nx+1][Ny+1][Nz+1];
 
 /*------------ Step 0 Boundary condition --------------------*/
 
-velocitybounder(n0);
+velocitybounder(VxOld, VyOld, VzOld);
 
 /*------------ Step I (velocities without pressure) ------------------*/
 for(i=1;i<=Nx;i++)
 	for(j=1;j<=Ny;j++)
 		for(k=1;k<=Nz;k++)
 			{
-	 vx[n1][i][j][k] = vx[n0][i][j][k] +
-		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-vx[n0][i][j][k] )*
-								(vx[n0][i+1][j][k]-vx[n0][i-1][j][k])/(2*dx)+
-			  ( (nut[i][j+1][k]-nut[i][j-1][k])/(2*dy)-vy[n0][i][j][k] )*
-								(vx[n0][i][j+1][k]-vx[n0][i][j-1][k])/(2*dy)+
-			  ( (nut[i][j][k+1]-nut[i][j][k-1])/(2*dz)-vz[n0][i][j][k] )*
-								(vx[n0][i][j][k+1]-vx[n0][i][j][k-1])/(2*dz)+
-			  ((vx[n0][i+1][j][k]-2*vx[n0][i][j][k]+vx[n0][i-1][j][k])/(dx*dx)+
-				(vx[n0][i][j+1][k]-2*vx[n0][i][j][k]+vx[n0][i][j-1][k])/(dy*dy)+
-				(vx[n0][i][j][k+1]-2*vx[n0][i][j][k]+vx[n0][i][j][k-1])/(dz*dz))*
+	 VxNew[i][j][k] = VxOld[i][j][k] +
+		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-VxOld[i][j][k] )*
+								(VxOld[i+1][j][k]-VxOld[i-1][j][k])/(2*dx)+
+			  ( (nut[i][j+1][k]-nut[i][j-1][k])/(2*dy)-VyOld[i][j][k] )*
+								(VxOld[i][j+1][k]-VxOld[i][j-1][k])/(2*dy)+
+			  ( (nut[i][j][k+1]-nut[i][j][k-1])/(2*dz)-VzOld[i][j][k] )*
+								(VxOld[i][j][k+1]-VxOld[i][j][k-1])/(2*dz)+
+			  ((VxOld[i+1][j][k]-2*VxOld[i][j][k]+VxOld[i-1][j][k])/(dx*dx)+
+				(VxOld[i][j+1][k]-2*VxOld[i][j][k]+VxOld[i][j-1][k])/(dy*dy)+
+				(VxOld[i][j][k+1]-2*VxOld[i][j][k]+VxOld[i][j][k-1])/(dz*dz))*
 						  (nut[i][j][k]) );
-	 vy[n1][i][j][k] = vy[n0][i][j][k] +
-		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-vx[n0][i][j][k] )*
-								(vy[n0][i+1][j][k]-vy[n0][i-1][j][k])/(2*dx)+
-			  ( (nut[i][j+1][k]-nut[i][j-1][k])/(2*dy)-vy[n0][i][j][k] )*
-								(vy[n0][i][j+1][k]-vy[n0][i][j-1][k])/(2*dy)+
-			  ( (nut[i][j][k+1]-nut[i][j][k-1])/(2*dz)-vz[n0][i][j][k] )*
-								(vy[n0][i][j][k+1]-vy[n0][i][j][k-1])/(2*dz)+
-			  ((vy[n0][i+1][j][k]-2*vy[n0][i][j][k]+vy[n0][i-1][j][k])/(dx*dx)+
-				(vy[n0][i][j+1][k]-2*vy[n0][i][j][k]+vy[n0][i][j-1][k])/(dy*dy)+
-				(vy[n0][i][j][k+1]-2*vy[n0][i][j][k]+vy[n0][i][j][k-1])/(dz*dz))*
+	 VyNew[i][j][k] = VyOld[i][j][k] +
+		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-VxOld[i][j][k] )*
+								(VyOld[i+1][j][k]-VyOld[i-1][j][k])/(2*dx)+
+			  ( (nut[i][j+1][k]-nut[i][j-1][k])/(2*dy)-VyOld[i][j][k] )*
+								(VyOld[i][j+1][k]-VyOld[i][j-1][k])/(2*dy)+
+			  ( (nut[i][j][k+1]-nut[i][j][k-1])/(2*dz)-VzOld[i][j][k] )*
+								(VyOld[i][j][k+1]-VyOld[i][j][k-1])/(2*dz)+
+			  ((VyOld[i+1][j][k]-2*VyOld[i][j][k]+VyOld[i-1][j][k])/(dx*dx)+
+				(VyOld[i][j+1][k]-2*VyOld[i][j][k]+VyOld[i][j-1][k])/(dy*dy)+
+				(VyOld[i][j][k+1]-2*VyOld[i][j][k]+VyOld[i][j][k-1])/(dz*dz))*
 						  ( nut[i][j][k]) );
-	 vz[n1][i][j][k] = vz[n0][i][j][k] +
-		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-vx[n0][i][j][k] )*
-								(vz[n0][i+1][j][k]-vz[n0][i-1][j][k])/(2*dx)+
-			  ( (nut[i][j+1][k]-nut[i][j-1][k])/(2*dy)-vy[n0][i][j][k] )*
-								(vz[n0][i][j+1][k]-vz[n0][i][j-1][k])/(2*dy)+
-			  ( (nut[i][j][k+1]-nut[i][j][k-1])/(2*dz)-vz[n0][i][j][k] )*
-								(vz[n0][i][j][k+1]-vz[n0][i][j][k-1])/(2*dz)+
-			  ((vz[n0][i+1][j][k]-2*vz[n0][i][j][k]+vz[n0][i-1][j][k])/(dx*dx)+
-				(vz[n0][i][j+1][k]-2*vz[n0][i][j][k]+vz[n0][i][j-1][k])/(dy*dy)+
-				(vz[n0][i][j][k+1]-2*vz[n0][i][j][k]+vz[n0][i][j][k-1])/(dz*dz))*
+	 VzNew[i][j][k] = VzOld[i][j][k] +
+		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-VxOld[i][j][k] )*
+								(VzOld[i+1][j][k]-VzOld[i-1][j][k])/(2*dx)+
+			  ( (nut[i][j+1][k]-nut[i][j-1][k])/(2*dy)-VyOld[i][j][k] )*
+								(VzOld[i][j+1][k]-VzOld[i][j-1][k])/(2*dy)+
+			  ( (nut[i][j][k+1]-nut[i][j][k-1])/(2*dz)-VzOld[i][j][k] )*
+								(VzOld[i][j][k+1]-VzOld[i][j][k-1])/(2*dz)+
+			  ((VzOld[i+1][j][k]-2*VzOld[i][j][k]+VzOld[i-1][j][k])/(dx*dx)+
+				(VzOld[i][j+1][k]-2*VzOld[i][j][k]+VzOld[i][j-1][k])/(dy*dy)+
+				(VzOld[i][j][k+1]-2*VzOld[i][j][k]+VzOld[i][j][k-1])/(dz*dz))*
 						  (nut[i][j][k]) );
 			}
 
 /*------------ Step I Boundary condition --------------------*/
 
-velocitybounder(n1);
+velocitybounder(VxNew, VyNew, VzNew);
 
 /*------------ Step II Divergention---------------------------*/
 
-	  for(i=1;i<=Nx;i++)
+  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
 		 for(k=1;k<=Nz;k++)
 		 {
-		 diver[i][j][k] = (vx[n1][i+1][j][k]-vx[n1][i-1][j][k])/(2*dx)+
-				 (vy[n1][i][j+1][k]-vy[n1][i][j-1][k])/(2*dy)+
-				 (vz[n1][i][j][k+1]-vz[n1][i][j][k-1])/(2*dz);
+		 diver[i][j][k] = (VxNew[i+1][j][k]-VxNew[i-1][j][k])/(2*dx)+
+				 (VyNew[i][j+1][k]-VyNew[i][j-1][k])/(2*dy)+
+				 (VzNew[i][j][k+1]-VzNew[i][j][k-1])/(2*dz);
 		 }
 
 /*------------ Step III (counting pressure)---------------------------*/
 
-		for(i=1;i<=Nx;i++)
+	for(i=1;i<=Nx;i++)
 	  for(j=1;j<=Ny;j++)
 			for(k=1;k<=Nz;k++)
-		  p[n1][i][j][k] = p[n0][i][j][k] - dt*diver[i][j][k]/gamma;
+		  pNew[i][j][k] = pOld[i][j][k] - dt*diver[i][j][k]/gamma;
 
 /*------------ Step IV (pressure to velocities)-----------------------*/
 
 			  //free conditions on horizontal surfaces
-		for(i=1;i<=Nx;i++)
+	for(i=1;i<=Nx;i++)
 	  for(j=1;j<=Ny;j++)
 		{
-	  p[n1][i][j][0] = p[n1][i][j][1];
-	  p[n1][i][j][Nz+1] = p[n1][i][j][Nz];
+	  pNew[i][j][0] = pNew[i][j][1];
+	  pNew[i][j][Nz+1] = pNew[i][j][Nz];
 		}
 
 				//periodic conditions on vertical surfaces
-		for(i=1;i<=Nx;i++)
+	for(i=1;i<=Nx;i++)
 	  for(k=0;k<=Nz+1;k++)
 		{
-	  p[n1][i][0][k] = p[n1][i][Ny][k];
-	  p[n1][i][Ny+1][k] = p[n1][i][1][k];
+	  pNew[i][0][k] = pNew[i][Ny][k];
+	  pNew[i][Ny+1][k] = pNew[i][1][k];
 		}
 
 				//gradient-periodic conditions on stream surfaces
-		for(j=0;j<=Ny+1;j++)
+	for(j=0;j<=Ny+1;j++)
 	  for(k=0;k<=Nz+1;k++)
 	 {
-	  p[n1][0][j][k]= p[n1][Nx][j][k]-(p2-p1);
-	  p[n1][Nx+1][j][k]= p[n1][1][j][k]+(p2-p1);
+	  pNew[0][j][k]= pNew[Nx][j][k]-(p2-p1);
+	  pNew[Nx+1][j][k]= pNew[1][j][k]+(p2-p1);
 	 }
 
 //correction of velocities by pressure
-		for(i=1;i<=Nx;i++)
+	for(i=1;i<=Nx;i++)
 	  for(j=1;j<=Ny;j++)
 			for(k=1;k<=Nz;k++)
 			  {
-		 vx[n1][i][j][k] -= dt*(p[n1][i+1][j][k]-p[n1][i-1][j][k])/(2*dx);
-		 vy[n1][i][j][k] -= dt*(p[n1][i][j+1][k]-p[n1][i][j-1][k])/(2*dy);
-		 vz[n1][i][j][k] -= dt*(p[n1][i][j][k+1]-p[n1][i][j][k-1])/(2*dz);
+		 VxNew[i][j][k] -= dt*(pNew[i+1][j][k]-pNew[i-1][j][k])/(2*dx);
+		 VyNew[i][j][k] -= dt*(pNew[i][j+1][k]-pNew[i][j-1][k])/(2*dy);
+		 VzNew[i][j][k] -= dt*(pNew[i][j][k+1]-pNew[i][j][k-1])/(2*dz);
 			  }
 
-}  //step_of_time
+}  //next_layer
 
 /*=========================================================================*/
 
@@ -323,7 +330,6 @@ void main()
 
 /*============ Initial condition ==============*/
 
-//  tmmax=80.0;
   tm = 0;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
@@ -340,7 +346,8 @@ void main()
 		for(k=0;k<=Nz+1;k++)
 				 {
 				 vx[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX
-								+ 1 - 4./Nz/Nz*(k-1-Nz/2)*(k-1-Nz/2);
+								//+ 1 - 4./Nz/Nz*(k-1-Nz/2)*(k-1-Nz/2)
+                                                                ;
 				 vy[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 vz[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
@@ -349,37 +356,20 @@ void main()
 //	fill_num_points();
 
 	fv = prepout("vv.dat",0);
-/*	fprintf(fv,"{");
-	for(k=1;k<=Nz-1;k++)
-		fprintf(fv,"%0.5g,",vx[0][Nx/2][Ny/2][k]);
-	fprintf(fv,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);*/
 
 	fnu = prepout("nut.dat",0);
-/*	fprintf(fnu,"{");
-	for(k=1;k<=Nz-1;k++)
-		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
-	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);*/
 
 //	fsf = prepout("strfunc.dat");
 
 /*=================== Main block ====================================*/
 
  konez=false;
-
+ int n0 = ns%2, n1 = (ns+1)%2;
 	while(tm<tmmax && ! konez)
 	{
-	 step_of_time(ns);
-    nut_by_flux(ns % 2);
-	 divmax = 0;
-	  for(i=1;i<=Nx;i++)
-	 for(j=1;j<=Ny;j++)
-		 for(k=1;k<=Nz;k++)
-		 {
-		 diver[i][j][k] = (vx[ns%2][i+1][j][k]-vx[ns%2][i-1][j][k])/(2*dx)+
-				 (vy[ns%2][i][j+1][k]-vy[ns%2][i][j-1][k])/(2*dy)+
-				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
-		 divmax=max(divmax,fabs(diver[i][j][k]));
-		 }
+        n0 = ns%2;  n1 = (ns+1)%2;
+	 next_layer(vx[n0],vx[n1],vy[n0],vy[n1],vz[n0],vz[n1],p[n0],p[n1]);
+    nut_by_flux(n0);
 	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
 	 {
 	 printing(ns);
@@ -393,7 +383,7 @@ void main()
 	putch(getch());
 	printf("\n vx[%u][%u][k]:\n",Nx/2,Ny/2);
 	for(k=1;k<=Nz;k++)
-		printf("%g\n",vx[ns%2][Nx/2][Ny/2][k]);
+		printf("%g\n",vx[n0][Nx/2][Ny/2][k]);
 	putch(getch());
 	fclose(fv);
 	fclose(fsf);
