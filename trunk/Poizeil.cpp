@@ -136,13 +136,13 @@ void printing(int ind)
 		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
 	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fv,"%0.5g,",avervx[k]);
-	fprintf(fv,"%0.5g}\n",avervx[Nz]);
+		fprintf(fv,"%0.5f,",avervx[k]);
+	fprintf(fv,"%0.5f}\n",avervx[Nz]);
 
 	fprintf(fnu,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fnu,"%0.5g,",avernu[k]);
-	fprintf(fnu,"%0.5g}\n",avernu[Nz]);
+		fprintf(fnu,"%0.5f,",avernu[k]);
+	fprintf(fnu,"%0.5f}\n",avernu[Nz]);
 
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
@@ -280,7 +280,7 @@ void main()
 
   gamma = 0.01;
 
-  ksi= 15;
+  ksi= 10;
 
 //  p1 = 8*lx/(lz*Re) ; p2 = 0;
   p1 = 4*ksi*ksi/Re/(cosh(ksi)-1)*lx/lz; p2 = 0;
@@ -384,4 +384,5 @@ konez = false;
 		printf("%g\n",vx[ns%2][Nx/2][Ny/2][k]);
 	putch(getch());
 	fclose(fv);
+	fclose(fnu);
 }//main
