@@ -2,7 +2,7 @@
 
 //divergence under small Reynolds
 
-//structural functions
+//structural functions(along rectangle)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,8 +72,9 @@ for(i=1;i<=Nx;i++)
 					for(n=0;n<=Nz-1;n++)
 						 {
 						 d = sqrt(l*l+m*m+n*n);
-						 d = (d>EPS)?d:1;      //per wave number
-						 d = -log(d);          //per wave number
+						 d = (d>EPS)?d:1;
+						 d = log(d)*(Nx+Ny+Nz)/log(sqrt(Nx*Nx+Ny*Ny+Nz*Nz));
+						 //(per wave number add "minus")
 						 dist=floor(d+0.5);
 						 num_points[dist]++;
 						 }
@@ -88,23 +89,28 @@ for(i=0;i<=Nx+Ny+Nz-1;i++)  s_func[i] =  0;
 for(i=1;i<=Nx;i++)
 	for(j=1;j<=Ny;j++)
 		for(k=1;k<=Nz;k++)
-			for(l=0;l<=Nx-1;l++)
-				for(m=0;m<=Ny-1;m++)
-					for(n=0;n<=Nz-1;n++)
+			for(l=1;l<=Nx;l++)
+				for(m=1;m<=Ny;m++)
+					for(n=1;n<=Nz;n++)
 						 {
-						 d = sqrt(l*l+m*m+n*n);
-						 d = (d>EPS)?d:1;      //per wave number
-						 d = -log(d);          //per wave number
+						 d = sqrt((l-i)*(l-i)+(m-j)*(m-j)+(n-k)*(n-k));
+						 d = (d>EPS)?d:1;
+						 d = log(d)*(Nx+Ny+Nz)/log(sqrt(Nx*Nx+Ny*Ny+Nz*Nz));
+						 //(per wave number add "minus")
 						 dist=floor(d+0.5);
-						 i_=(i+l)%Nx+1;
-						 j_=(j+m)%Ny+1;
-						 k_=(k+n)%Nz+1;
-						 s_func[dist]+=pow(napr(vx[nn][i_][j_][k_]-vx[nn][i][j][k],
+						 i_ = l;
+						 j_ = m;
+						 k_ = n;
+/*						 s_func[dist]+=pow(napr(vx[nn][i_][j_][k_]-vx[nn][i][j][k],
 										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
 										 vz[nn][i_][j_][k_]-vz[nn][i][j][k],
 										 vx[nn][i_][j_][k_]-vx[nn][i][j][k],
 										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
-										 vz[nn][i_][j_][k_]-vz[nn][i][j][k]),q);
+										 vz[nn][i_][j_][k_]-vz[nn][i][j][k]),q);*/
+						 s_func[dist]+=pow(napr(vx[nn][i_][j_][k_]-vx[nn][i][j][k],
+										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
+										 vz[nn][i_][j_][k_]-vz[nn][i][j][k],
+										 l,m,n),q);
 						 }
 for(i=0;i<=Nx+Ny+Nz;i++)
 	if(num_points[i]) s_func[i]=(s_func[i]/num_points[i]);
@@ -205,8 +211,8 @@ void printing(int ind)
 	//putting structural functions to file
 	struct_func(2,ind);
 	fprintf(fsf,"{%0.6f",s_func[0]);
-	k=1;
-	while(num_points[k++]) fprintf(fsf,",%0.6f",s_func[k]);
+	for(k=1;k<=Nx+Ny+Nz;k++)
+		if(num_points[k]) fprintf(fsf,",%0.6f",s_func[k]);
 	fprintf(fsf,"}\n");
 
 	 if(kbhit()&&getch()=='q') konez=true;
