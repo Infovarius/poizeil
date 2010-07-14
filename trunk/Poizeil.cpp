@@ -1,14 +1,15 @@
-//don't lead to v=1, but with gradient periodic condition
+//working version:
+//gradient periodic condition+max v=1+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   11
-# define  Ny   11
-# define  Nz   11
-# define  EPS  1e-20
+# define  Nx   5
+# define  Ny   5
+# define  Nz   10
+# define  EPS  1e-15
 
 double dt,
 		 vx[2][Nx+2][Ny+2][Nz+2],
@@ -95,11 +96,11 @@ double p[2][Nx+2][Ny+2][Nz+2],
 
   tmmax=50.0;
   tm = 0;
-  dt = 1e-04;
+  dt = 1e-03;
 
-  lx = 1; lz = ly= 0.5; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
+  lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
-  p1 = 8*lx*lx/(lz*lz*Re); p2 = 0;
+  p1 = 8*lx/(lz*Re); p2 = 0;
 
   gamma = 0.001; ns = 0;
 
@@ -109,7 +110,7 @@ double p[2][Nx+2][Ny+2][Nz+2],
 				 {
 				 vx[0][i][j][k]=vy[0][i][j][k]=vz[0][i][j][k]=0;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
-				 nut[i][j][k]= 1.0; //constant for a while
+				 nut[i][j][k]= 0.0; //constant for a while
 				 }
 
 /*   prepout("vv.dat");
@@ -209,12 +210,12 @@ velocitybounder(n1);
 	  p[n1][i][Ny+1][k] = p[n1][i][1][k];
 		}
 
-				//gradient periodic conditions on stream surfaces
+				//gradient-periodic conditions on stream surfaces
 		for(j=0;j<=Ny+1;j++)
 	  for(k=0;k<=Nz+1;k++)
 	 {
-	  p[n1][0][j][k]= p1+p[n1][Nx][j][k]-p2+(p2-p1)/Nx;
-	  p[n1][Nx+1][j][k]= p2+p[n1][1][j][k]-p1-(p2-p1)/Nx;
+	  p[n1][0][j][k]= p[n1][Nx][j][k]-(p2-p1);
+	  p[n1][Nx+1][j][k]= p[n1][1][j][k]+(p2-p1);
 	 }
 
 //correction of velocities by pressure
@@ -272,7 +273,6 @@ velocitybounder(n1);
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
 			vxmax>1.0/EPS || vymax>1.0/EPS ||vzmax>1.0/EPS) break;
 
- //	 if(kbhit()) break;
 	  ns++;
 	  tm+=dt;
 	}
@@ -283,4 +283,4 @@ velocitybounder(n1);
 		printf("%g\n",vx[n0][Nx/2][Ny/2][k]);
 	putch(getch());
 
-}//main
+															 }//main
