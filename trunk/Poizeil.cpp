@@ -10,9 +10,9 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   4
-# define  Ny   4
-# define  Nz   50
+# define  Nx   10
+# define  Ny   10
+# define  Nz   60
 # define  EPS  1e-15
 
 double dt,
@@ -87,7 +87,7 @@ double p[2][Nx+2][Ny+2][Nz+2],
 
  double p1, p2;//pressure on the ends
 
- double Re, gamma, ksi;
+ double Re, gamma, ksi, mn;
 
  double epsp, epsvx,epsvy,epsvz ;
 
@@ -95,16 +95,16 @@ double p[2][Nx+2][Ny+2][Nz+2],
 
 /*============ Initial condition ==============*/
 
-  Re = 1.0;
+  Re = 100.0;
 
   tmmax=500.0;
   tm = 0;
-  dt = 1e-04;
+  dt = 5e-03;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
   gamma = 0.1;
-  ksi = 10;
+  ksi = 5;
 
   p1 = 4*ksi*ksi/Re/(cosh(ksi)-1)*lx/lz; p2 = 0;
 
@@ -122,12 +122,18 @@ double p[2][Nx+2][Ny+2][Nz+2],
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
 				 nut[i][j][k]= ksi*(2*(k-0.5)*dz-1)/sinh(ksi*(2*(k-0.5)*dz-1))/Re;
 				 }
+//Prandtl's model
+/*  for(i=0;i<=Nx+1;i++)
+	for(j=0;j<=Ny+1;j++)
+		for(k=0;k<=Nz+1;k++)
+				 nut[i][j][k]=mn*min(k,Nz-k)*min(k,Nz-k)*dz*dz*
+					abs((vx[0][i][j][k+1]-vx[0][i][j][k-1])/2/dz);*/
 
 	prepout("vv.dat");
 	fprintf(ff,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(ff,"%0.5g,",vx[0][Nx/2][Ny/2][k]);
-	fprintf(ff,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);
+		fprintf(ff,"%g,",vx[0][Nx/2][Ny/2][k]);
+	fprintf(ff,"%g}\n",vx[0][Nx/2][Ny/2][Nz]);
 
 /*=================== Main block ====================================*/
 
@@ -258,7 +264,7 @@ velocitybounder(n1);
 		 }
 
 /*--------------------Printing of results -----------------------------*/
-	 if(!(ns%500))
+	 if(!(ns%100))
 	 {
 	 //printing
 		epsvx = 0;
@@ -290,8 +296,8 @@ velocitybounder(n1);
 		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
 	fprintf(ff,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(ff,"%0.5g,",vx[n0][Nx/2][Ny/2][k]);
-	fprintf(ff,"%0.5g}\n",vx[n0][Nx/2][Ny/2][Nz]);
+		fprintf(ff,"%g,",vx[n0][Nx/2][Ny/2][k]);
+	fprintf(ff,"%g}\n",vx[n0][Nx/2][Ny/2][Nz]);
 
 	 if(kbhit()&&getch()=='q')break;
 	 }
