@@ -1,4 +1,4 @@
-//working version:
+//working version: 
 //gradient periodic condition+max v=1+print to file
 
 /*rending in Mathematics by string:
@@ -11,17 +11,15 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 #include <math.h>
 #include <string.h>
 #include <conio.h>
-
-# define  Nx   10
-# define  Ny   10
-# define  Nz   20
-# define  EPS  1e-10
-# define STEP 0.01
-# define LEN (min(k,Nz-k)*dz*sqrt(1-2*min(k,Nz-k)/Nz))
-//#define LEN 4
+//#include <iostream.h>
 
 
- double dt=10e-5,
+# define  Nx   4
+# define  Ny   4
+# define  Nz   60
+# define  EPS  1e-15
+
+ double dt,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -35,7 +33,7 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 
  double p1, p2;//pressure on the ends
 
- bool konez;
+ int konez;
  FILE  *fv,*fnu;
 
 FILE *prepout(char *x)  //opening of file to ff
@@ -126,10 +124,9 @@ void printing(int ind)
 		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
 	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);
 
-	 if(kbhit()&&getch()=='q') konez=true;
+	 if(kbhit()&&getch()=='q') konez=1;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
-			vxmax>100.0 || vymax>100.0 ||vzmax>100.0)
-			konez=true;
+			vxmax>100.0 || vymax>100.0 ||vzmax>100.0) konez=1;
 
  }    //printing
 
@@ -249,7 +246,8 @@ void main()
 {
  long ns;
  int i,j,k;
- double mn=40;
+ double mn=15;
+ double dop=2;
 
 /*============ Initial condition ==============*/
 
@@ -257,6 +255,7 @@ void main()
 
   tmmax=500.0;
   tm = 0;
+  dt = 1e-05;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
@@ -292,7 +291,7 @@ void main()
 /*=================== Main block ====================================*/
 
 //initial iterations (Poizeil profil)
-/* konez=false;
+ konez=0;
 
 	while(tm<tmmax && ! konez)
 	{
@@ -307,7 +306,7 @@ void main()
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
 		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
+	 if(!(ns%100))
 	 {
 	 printing((ns+1)%2);
 	 }
@@ -317,22 +316,36 @@ void main()
 	}
 
 	printf("\n the end of initial iterations, press any key to continue\n");
-//	putch(getch());*/
+	putch(getch());
 
-konez = false;
+konez = 0;
+dop=3;
 //model of Prandtl iterations
-	while(tm<tmmax && ! konez)
+	while(tm<tmmax+(dop=0) && ! konez)
 	{
+	dop=1;
 	 step_of_time(ns);
 //correction nut in Prandtl model
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=1;k<=Nz;k++)
-				 nut[i][j][k]=1+mn*pow(LEN,2)*
-					(min(k,Nz-k)*0>Nz/3?
+				 {
+				 dop=k;
+				 dop=1;
+				 dop=min(k,Nz-k)*dz;
+				 dop=pow(min(k,Nz-k)*dz,2);
+				 dop=fabs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
+				 nut[i][j][k]=pow(min(k,Nz-k)*dz,2);
+				 nut[i][j][k]*=(min(k,Nz-k)>Nz/3?
 						vx[(ns+1)%2][i][j][k]:
 						fabs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz)
 						);
+				 nut[i][j][k]*=mn;
+				 nut[i][j][k]+=1;
+				 //nut[i][j][k]=1+mn*pow(min(k,Nz-k)*dz,2)*
+				 //	abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
+// printf("%d %d %d",i,j,k);
+				 }
 	 divmax = 0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
@@ -343,7 +356,7 @@ konez = false;
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
 		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
+	 if(!(ns%100))
 	 {
 	 printing((ns+1)%2);
 	 }
