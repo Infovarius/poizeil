@@ -6,12 +6,16 @@
 # include "mesh.h"
 
 # define  EPS  1e-9
-# define STEP (0.01)
+# define STEP (1)
 # define uplevel 100000.
 # define Noise 0.01
+
 # include "macros.h"
 
-# include "vars.h"
+# define maschtab 10000000
+# define modul(a,b,c) (sqrt(norm(a,b,c)))
+
+ double Re = 100000;
 
  double dt=5e-3,
 		 vx[2][Nx+2][Ny+2][Nz+2],
@@ -25,17 +29,18 @@
  long num_points[Nx/2+Ny/2+Nz];
  double gamma ;
 
- double tm, lx,ly,lz, tmmax,divmax ;
+ double tm, dx,dy,dz, lx,ly,lz, tmmax=500,divmax ;
 
  double p1, p2;//pressure on the ends
 
  bool konez;
  FILE  *fv, *fnu, *fsf;
 
-FILE *prepout(char *x)  //opening of file to ff
+FILE *prepout(char *x, int mode)  //opening of file to ff
 {
 FILE *ff;
-  if ((ff = fopen (x,"w+"))==NULL)
+if(mode) ff=fopen(x,"a");
+else if ((ff = fopen (x,"w+"))==NULL)
 	 {
 		printf ("Can't open file %s !\n",x);
 		exit(-1);
@@ -43,8 +48,6 @@ FILE *ff;
 return(ff);
 }
 
-# define maschtab 10
-# define modul(a,b,c) (sqrt(norm(a,b,c)))
 
 void nut_by_flux(int ind) //calculating nu_turbulent by velocity fluctuations
 {
@@ -83,6 +86,7 @@ for(i=0;i<=Nx+1;i++)
             if(flux>maxflux) maxflux = flux;
             nut[i][j][k] = (1. + maschtab * flux)/Re;
             }
+dt = 0.2*dx * dx*Re/(1.+ maschtab*maxflux);
 }
 
 
@@ -128,12 +132,13 @@ int i,j,k;
 	 }
 } //velocitybounder
 
-void printing(int ind)
+void printing(int ns)
 {
  int i,j,k;
+ int ind = (ns+1)%2;
  double epsp=0, epsvx=0, epsvy=0, epsvz=0;
  double vxmax=0, vymax=0, vzmax= 0;
-// double avervx[Nz+2], avernu[Nz+2];
+ double avervx[Nz+2], avernu[Nz+2];
 
 		for(i=1;i<=Nx;i++)
 		  for(j=1;j<=Ny;j++)
@@ -152,7 +157,7 @@ void printing(int ind)
 					 epsp  = fabs(p[ind][i][j][k]-p[(ind+1)%2][i][j][k]);
 			 }
 
-/*	for(k=1;k<=Nz;k++)
+for(k=1;k<=Nz;k++)
 		{
 		avervx[k] = avernu[k] = 0;
 		for(i=1;i<=Nx;i++)
@@ -163,32 +168,39 @@ void printing(int ind)
 				}
 		avervx[k] /= Nx*Ny;
 		avernu[k] /= Nx*Ny;
-		}*/
+		}
 
-		 clrscr();
-		 printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
-		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
+clrscr();
+printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
+printf("              %e %e %e %e\n",vxmax,vymax,vzmax,dt);
 	//putting velocities to file
+        fv = prepout("vv.dat",ns);
 	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
 		fprintf(fv,"%0.5f,",vx[(ind+1)%2][Nx/2][Ny/2][k]);
 	fprintf(fv,"%0.5f}\n",vx[(ind+1)%2][Nx/2][Ny/2][Nz]);
+        fclose(fv);
 	//putting viscosities to file
-/*	fprintf(fnu,"{");
+        fnu = prepout("nut.dat",ns);
+	fprintf(fnu,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fnu,"%0.5f,",avernu[k]);
-	fprintf(fnu,"%0.5f}\n",avernu[Nz]);*/
+		fprintf(fnu,"%0.10f,",avernu[k]);
+	fprintf(fnu,"%0.10f}\n",avernu[Nz]);
+        fclose(fnu);
 	//putting structural functions to file
-//	struct_func(2,ind);
+/*	struct_func(2,ind);
 	fprintf(fsf,"{%0.6f",s_func[1][0]);
 	for(k=1;k<=Nx/2+Ny/2+Nz-1&&num_points[k];k++)
 		fprintf(fsf,",%0.6f",s_func[1][k]);
-	fprintf(fsf,"}\n");
+	fprintf(fsf,"}\n");*/
 
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
 			vxmax>uplevel || vymax>uplevel ||vzmax>uplevel)
 			konez=true;
+         if(dt>0.5*min_d/modul(vxmax,vymax,vzmax))
+               dt = 0.5*min_d/modul(vxmax,vymax,vzmax);
+         if(dt<1e-20) konez=true;      
 
 } //printing
 
@@ -311,7 +323,7 @@ void main()
 
 /*============ Initial condition ==============*/
 
-  tmmax=500.0;
+//  tmmax=80.0;
   tm = 0;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
@@ -336,19 +348,19 @@ void main()
 				 }
 //	fill_num_points();
 
-	fv = prepout("vv.dat");
-	fprintf(fv,"{");
+	fv = prepout("vv.dat",0);
+/*	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
 		fprintf(fv,"%0.5g,",vx[0][Nx/2][Ny/2][k]);
-	fprintf(fv,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);
+	fprintf(fv,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);*/
 
-	fnu = prepout("nut.dat");
-	fprintf(fnu,"{");
+	fnu = prepout("nut.dat",0);
+/*	fprintf(fnu,"{");
 	for(k=1;k<=Nz-1;k++)
 		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
-	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);
+	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);*/
 
-	fsf = prepout("strfunc.dat");
+//	fsf = prepout("strfunc.dat");
 
 /*=================== Main block ====================================*/
 
@@ -357,7 +369,7 @@ void main()
 	while(tm<tmmax && ! konez)
 	{
 	 step_of_time(ns);
-    nut_by_flux(ns);
+    nut_by_flux(ns % 2);
 	 divmax = 0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
@@ -368,9 +380,9 @@ void main()
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
 		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-//	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
+	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
 	 {
-	 printing((ns+1)%2);
+	 printing(ns);
 	 }
 
 	  ns++;
