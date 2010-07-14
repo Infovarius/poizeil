@@ -4,6 +4,8 @@
 /*rending in Mathematics by string:
 ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
+
+//other structuring and Prandtl's models
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -12,12 +14,14 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 
 # define  Nx   10
 # define  Ny   10
-# define  Nz   30
-# define  EPS  1e-15
+# define  Nz   20
+# define  EPS  1e-10
+# define STEP 0.01
+# define LEN (min(k,Nz-k)*dz*sqrt(1-2*min(k,Nz-k)/Nz))
+//#define LEN 4
 
-# define  fz(z)  ((z<0.1)?(z)*sqrt(1-(z)/(lz/2.)):1)
-//# define  fz(z)  0.14-0.08*pow(1-(z)/(lz/2.),2)-0.06*pow(1-(z)/(lz/2.),4)
- double dt,
+
+ double dt=10e-5,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -32,15 +36,17 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
  double p1, p2;//pressure on the ends
 
  bool konez;
- FILE  *ff;
+ FILE  *fv,*fnu;
 
-void prepout(char *x)  //opening of file to ff
+FILE *prepout(char *x)  //opening of file to ff
 {
+FILE *ff;
   if ((ff = fopen (x,"w+"))==NULL)
 	 {
 		printf ("Can't open file %s !\n",x);
 		exit(-1);
 	 }
+return(ff);
 }
 
 void velocitybounder(int ind)  //boundary conditions on velocities
@@ -110,14 +116,20 @@ void printing(int ind)
 		 clrscr();
 		 printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
 		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
-	fprintf(ff,"{");
+	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(ff,"%0.5g,",vx[(ind+1)%2][Nx/2][Ny/2][k]);
-	fprintf(ff,"%0.5g}\n",vx[(ind+1)%2][Nx/2][Ny/2][Nz]);
+		fprintf(fv,"%0.5g,",vx[(ind+1)%2][Nx/2][Ny/2][k]);
+	fprintf(fv,"%0.5g}\n",vx[(ind+1)%2][Nx/2][Ny/2][Nz]);
+
+	fprintf(fnu,"{");
+	for(k=1;k<=Nz-1;k++)
+		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
+	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);
 
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
-			vxmax>100.0 || vymax>100.0 ||vzmax>100.0) konez=true;
+			vxmax>100.0 || vymax>100.0 ||vzmax>100.0)
+			konez=true;
 
  }    //printing
 
@@ -237,7 +249,7 @@ void main()
 {
  long ns;
  int i,j,k;
- double mn=100;
+ double mn=40;
 
 /*============ Initial condition ==============*/
 
@@ -245,7 +257,6 @@ void main()
 
   tmmax=500.0;
   tm = 0;
-  dt = 1e-05;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
@@ -253,40 +264,39 @@ void main()
 
   p1 = 8*lx/(lz*Re) ; p2 = 0;
 
-//  mn= Re*(p2-p1)/lx*(1-coshl(ksi))/ksi/Re/2;
-
   ns = 0;
 
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=0;k<=Nz+1;k++)
 				 {
-				 vx[0][i][j][k]=0.001*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vy[0][i][j][k]=0.001*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vz[0][i][j][k]=0.001*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vx[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vy[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vz[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
 				 nut[i][j][k]= 1;
 				 }
 
-	prepout("vv.dat");
-	fprintf(ff,"{");
+	fv = prepout("vv.dat");
+	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(ff,"%0.5g,",vx[0][Nx/2][Ny/2][k]);
-	fprintf(ff,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);
+		fprintf(fv,"%0.5g,",vx[0][Nx/2][Ny/2][k]);
+	fprintf(fv,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);
+
+	fnu = prepout("nut.dat");
+	fprintf(fnu,"{");
+	for(k=1;k<=Nz-1;k++)
+		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
+	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);
 
 /*=================== Main block ====================================*/
 
- konez=false;
+//initial iterations (Poizeil profil)
+/* konez=false;
 
 	while(tm<tmmax && ! konez)
 	{
 	 step_of_time(ns);
-//correction nut in Prandtl model
-  for(i=0;i<=Nx+1;i++)
-	for(j=0;j<=Ny+1;j++)
-		for(k=1;k<=Nz;k++)
-			 nut[i][j][k]=1+mn*pow(fz(min(k,Nz-k)*dz),2)*abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
-
 	 divmax = 0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
@@ -295,9 +305,45 @@ void main()
 		 diver[i][j][k] = (vx[ns%2][i+1][j][k]-vx[ns%2][i-1][j][k])/(2*dx)+
 				 (vy[ns%2][i][j+1][k]-vy[ns%2][i][j-1][k])/(2*dy)+
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
-		 divmax=max(divmax,(double)abs(diver[i][j][k]));
+		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-	 if(!(ns%100))
+	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
+	 {
+	 printing((ns+1)%2);
+	 }
+
+	  ns++;
+	  tm+=dt;
+	}
+
+	printf("\n the end of initial iterations, press any key to continue\n");
+//	putch(getch());*/
+
+konez = false;
+//model of Prandtl iterations
+	while(tm<tmmax && ! konez)
+	{
+	 step_of_time(ns);
+//correction nut in Prandtl model
+  for(i=0;i<=Nx+1;i++)
+	for(j=0;j<=Ny+1;j++)
+		for(k=1;k<=Nz;k++)
+				 nut[i][j][k]=1+mn*pow(LEN,2)*
+					(min(k,Nz-k)*0>Nz/3?
+						vx[(ns+1)%2][i][j][k]:
+						fabs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz)
+						);
+	 divmax = 0;
+	  for(i=1;i<=Nx;i++)
+	 for(j=1;j<=Ny;j++)
+		 for(k=1;k<=Nz;k++)
+		 {
+		 diver[i][j][k] = (vx[ns%2][i+1][j][k]-vx[ns%2][i-1][j][k])/(2*dx)+
+				 (vy[ns%2][i][j+1][k]-vy[ns%2][i][j-1][k])/(2*dy)+
+				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
+		 divmax=max(divmax,fabs(diver[i][j][k]));
+		 }
+	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
 	 {
 	 printing((ns+1)%2);
 	 }
@@ -312,5 +358,5 @@ void main()
 	for(k=1;k<=Nz;k++)
 		printf("%g\n",vx[ns%2][Nx/2][Ny/2][k]);
 	putch(getch());
-	fclose(ff);
+	fclose(fv);
 }//main
