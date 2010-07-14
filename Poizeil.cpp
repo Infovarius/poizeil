@@ -1,7 +1,6 @@
 //working version:
 //gradient periodic condition+max v=1+print to file
 
-//turbulence constant nu
 /*rending in Mathematics by string:
 ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
@@ -11,12 +10,10 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   10
-# define  Ny   10
-# define  Nz   20
+# define  Nx   4
+# define  Ny   4
+# define  Nz   50
 # define  EPS  1e-15
-# define min(x,y) ((x>y)?y:x)
-# define abs(x)  ((x>0)?x:-x)
 
 double dt,
 		 vx[2][Nx+2][Ny+2][Nz+2],
@@ -90,52 +87,47 @@ double p[2][Nx+2][Ny+2][Nz+2],
 
  double p1, p2;//pressure on the ends
 
- double Re, gamma ,ksi, mn;
+ double Re, gamma, ksi;
 
  double epsp, epsvx,epsvy,epsvz ;
 
- double tm, dx,dy,dz, lx,ly,lz, tmmax, vxmax,vymax,vzmax ;
+ double tm, dx,dy,dz, lx,ly,lz, tmmax, vxmax,vymax,vzmax,divmax ;
 
 /*============ Initial condition ==============*/
 
-  Re = 10.0;
+  Re = 1.0;
 
-  tmmax=50.0;
+  tmmax=500.0;
   tm = 0;
-  dt = 1e-03;
+  dt = 1e-04;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
-  p1 = 8*lx/(lz*Re); p2 = 0;
+  gamma = 0.1;
+  ksi = 10;
 
-  gamma = 0.01; ksi = 1;
-//nut->(nut+1)/Re
-  mn = Re*(p2-p1)/lx*(1-coshl(ksi))/ksi/Re;
-//mn=0.01;
+  p1 = 4*ksi*ksi/Re/(cosh(ksi)-1)*lx/lz; p2 = 0;
+
+//  mn= Re*(p2-p1)/lx*(1-coshl(ksi))/ksi/Re/2;
+
   ns = 0;
 
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=0;k<=Nz+1;k++)
 				 {
-//				 vx[0][i][j][k]=vy[0][i][j][k]=vz[0][i][j][k]=0;
-             vx[0][i][j][k]=0.1*((double)rand() - 16384.0)/16384.0;
-             vy[0][i][j][k]=0.1*((double)rand() - 16384.0)/16384.0;
-             vz[0][i][j][k]=0.1*((double)rand() - 16384.0)/16384.0;
+				 vx[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vy[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vz[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
-				 nut[i][j][k]= 0./Re;//mn*(2*(k-0.5)*dz-1)/sinh(ksi*(2*(k-0.5)*dz-1));
+				 nut[i][j][k]= ksi*(2*(k-0.5)*dz-1)/sinh(ksi*(2*(k-0.5)*dz-1))/Re;
 				 }
 
-/*  for(i=0;i<=Nx+1;i++)
-	for(j=0;j<=Ny+1;j++)
-		for(k=0;k<=Nz+1;k++)
-				 nut[i][j][k]=mn*min(k,Nz-k)*min(k,Nz-k)*dz*dz*
-					abs((vx[0][i][j][k+1]-vx[0][i][j][k-1])/2/dz);*/
 	prepout("vv.dat");
 	fprintf(ff,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(ff,"%g,",vx[0][Nx/2][Ny/2][k]);
-	fprintf(ff,"%g}\n",vx[0][Nx/2][Ny/2][Nz]);
+		fprintf(ff,"%0.5g,",vx[0][Nx/2][Ny/2][k]);
+	fprintf(ff,"%0.5g}\n",vx[0][Nx/2][Ny/2][Nz]);
 
 /*=================== Main block ====================================*/
 
@@ -164,7 +156,7 @@ for(i=1;i<=Nx;i++)
 			  ((vx[n0][i+1][j][k]-2*vx[n0][i][j][k]+vx[n0][i-1][j][k])/(dx*dx)+
 				(vx[n0][i][j+1][k]-2*vx[n0][i][j][k]+vx[n0][i][j-1][k])/(dy*dy)+
 				(vx[n0][i][j][k+1]-2*vx[n0][i][j][k]+vx[n0][i][j][k-1])/(dz*dz))*
-						  (1./Re+nut[i][j][k]) );
+						  (nut[i][j][k]) );
 	 vy[n1][i][j][k] = vy[n0][i][j][k] +
 		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-vx[n0][i][j][k] )*
 								(vy[n0][i+1][j][k]-vy[n0][i-1][j][k])/(2*dx)+
@@ -175,7 +167,7 @@ for(i=1;i<=Nx;i++)
 			  ((vy[n0][i+1][j][k]-2*vy[n0][i][j][k]+vy[n0][i-1][j][k])/(dx*dx)+
 				(vy[n0][i][j+1][k]-2*vy[n0][i][j][k]+vy[n0][i][j-1][k])/(dy*dy)+
 				(vy[n0][i][j][k+1]-2*vy[n0][i][j][k]+vy[n0][i][j][k-1])/(dz*dz))*
-						  (1./Re+nut[i][j][k]) );
+						  ( nut[i][j][k]) );
 	 vz[n1][i][j][k] = vz[n0][i][j][k] +
 		dt*( ( (nut[i+1][j][k]-nut[i-1][j][k])/(2*dx)-vx[n0][i][j][k] )*
 								(vz[n0][i+1][j][k]-vz[n0][i-1][j][k])/(2*dx)+
@@ -186,7 +178,7 @@ for(i=1;i<=Nx;i++)
 			  ((vz[n0][i+1][j][k]-2*vz[n0][i][j][k]+vz[n0][i-1][j][k])/(dx*dx)+
 				(vz[n0][i][j+1][k]-2*vz[n0][i][j][k]+vz[n0][i][j-1][k])/(dy*dy)+
 				(vz[n0][i][j][k+1]-2*vz[n0][i][j][k]+vz[n0][i][j][k-1])/(dz*dz))*
-						  (1./Re+nut[i][j][k]) );
+						  (nut[i][j][k]) );
 			}
 
 /*------------ Step I Boundary condition --------------------*/
@@ -246,6 +238,7 @@ velocitybounder(n1);
 		 vy[n1][i][j][k] -= dt*(p[n1][i][j+1][k]-p[n1][i][j-1][k])/(2*dy);
 		 vz[n1][i][j][k] -= dt*(p[n1][i][j][k+1]-p[n1][i][j][k-1])/(2*dz);
 			  }
+
 //correction nut in Prandtl model
 /*  for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
@@ -253,6 +246,7 @@ velocitybounder(n1);
 				 nut[i][j][k]=mn*min(k,Nz-k)*min(k,Nz-k)*dz*dz*
 					abs((vx[n1][i][j][k+1]-vx[n1][i][j][k-1])/2/dz);*/
 
+	 divmax = 0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
 		 for(k=1;k<=Nz;k++)
@@ -260,10 +254,11 @@ velocitybounder(n1);
 		 div[i][j][k] = (vx[n1][i+1][j][k]-vx[n1][i-1][j][k])/(2*dx)+
 				 (vy[n1][i][j+1][k]-vy[n1][i][j-1][k])/(2*dy)+
 				 (vz[n1][i][j][k+1]-vz[n1][i][j][k-1])/(2*dz);
+		 divmax=max(divmax,(double)abs(div[i][j][k]));
 		 }
 
 /*--------------------Printing of results -----------------------------*/
-	 if(!(ns%100))
+	 if(!(ns%500))
 	 {
 	 //printing
 		epsvx = 0;
@@ -291,12 +286,12 @@ velocitybounder(n1);
 					 epsp  = fabs(p[n1][i][j][k]-p[n0][i][j][k]);
 			 }
 		 clrscr();
-		 printf("\r %f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
-		 printf("             %e %e %e\n",vxmax,vymax,vzmax);
+		 printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
+		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
 	fprintf(ff,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(ff,"%g,",vx[n0][Nx/2][Ny/2][k]);
-	fprintf(ff,"%g}\n",vx[n0][Nx/2][Ny/2][Nz]);
+		fprintf(ff,"%0.5g,",vx[n0][Nx/2][Ny/2][k]);
+	fprintf(ff,"%0.5g}\n",vx[n0][Nx/2][Ny/2][Nz]);
 
 	 if(kbhit()&&getch()=='q')break;
 	 }
