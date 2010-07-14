@@ -12,7 +12,7 @@
 
 # define  Nx   10
 # define  Ny   10
-# define  Nz   30
+# define  Nz   10
 # define  EPS  1e-9
 # define STEP (0.0001*Re)
 # define uplevel 100000.
@@ -21,7 +21,7 @@
 //#define LEN 1
 
 
- double dt=6e-4,
+ double dt=5e-3,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -62,6 +62,7 @@ if(mod==0) return(0);
 void fill_num_points()//filling of number points array
 {
 int i,j,k,l,m,n,dist;
+double d;
 for(i=0;i<=Nx+Ny+Nz;i++) num_points[i] = 0;
 for(i=1;i<=Nx;i++)
 	for(j=1;j<=Ny;j++)
@@ -70,7 +71,10 @@ for(i=1;i<=Nx;i++)
 				for(m=0;m<=Ny-1;m++)
 					for(n=0;n<=Nz-1;n++)
 						 {
-						 dist=floor(sqrt(l*l+m*m+n*n)+0.5);
+						 d = sqrt(l*l+m*m+n*n);
+						 d = (d>EPS)?d:1;      //per wave number
+						 d = -log(d);          //per wave number
+						 dist=floor(d+0.5);
 						 num_points[dist]++;
 						 }
 }//fill_num_points
@@ -79,7 +83,8 @@ void struct_func(int q,int ind)//structural function of order q
 {
 long nn=ind;
 int i,j,k,l,m,n,i_,j_,k_,dist;
-for(i=0;i<=Nx+Ny+Nz;i++)  s_func[i] =  0;
+double d;
+for(i=0;i<=Nx+Ny+Nz-1;i++)  s_func[i] =  0;
 for(i=1;i<=Nx;i++)
 	for(j=1;j<=Ny;j++)
 		for(k=1;k<=Nz;k++)
@@ -87,7 +92,10 @@ for(i=1;i<=Nx;i++)
 				for(m=0;m<=Ny-1;m++)
 					for(n=0;n<=Nz-1;n++)
 						 {
-						 dist=floor(sqrt(l*l+m*m+n*n)+0.5);
+						 d = sqrt(l*l+m*m+n*n);
+						 d = (d>EPS)?d:1;      //per wave number
+						 d = -log(d);          //per wave number
+						 dist=floor(d+0.5);
 						 i_=(i+l)%Nx+1;
 						 j_=(j+m)%Ny+1;
 						 k_=(k+n)%Nz+1;
@@ -149,7 +157,7 @@ void printing(int ind)
  int i,j,k;
  double epsp=0, epsvx=0, epsvy=0, epsvz=0;
  double vxmax=0, vymax=0, vzmax= 0;
- double avervx[Nz+2], avernu[Nz+2];
+// double avervx[Nz+2], avernu[Nz+2];
 
 		for(i=1;i<=Nx;i++)
 		  for(j=1;j<=Ny;j++)
@@ -168,7 +176,7 @@ void printing(int ind)
 					 epsp  = fabs(p[ind][i][j][k]-p[(ind+1)%2][i][j][k]);
 			 }
 
-	for(k=1;k<=Nz;k++)
+/*	for(k=1;k<=Nz;k++)
 		{
 		avervx[k] = avernu[k] = 0;
 		for(i=1;i<=Nx;i++)
@@ -179,7 +187,7 @@ void printing(int ind)
 				}
 		avervx[k] /= Nx*Ny;
 		avernu[k] /= Nx*Ny;
-		}
+		}*/
 
 		 clrscr();
 		 printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
@@ -187,13 +195,13 @@ void printing(int ind)
 	//putting velocities to file
 	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fv,"%0.5f,",avervx[k]);
-	fprintf(fv,"%0.5f}\n",avervx[Nz]);
+		fprintf(fv,"%0.5f,",vx[(ind+1)%2][Nx/2][Ny/2][k]);
+	fprintf(fv,"%0.5f}\n",vx[(ind+1)%2][Nx/2][Ny/2][Nz]);
 	//putting viscosities to file
-	fprintf(fnu,"{");
+/*	fprintf(fnu,"{");
 	for(k=1;k<=Nz-1;k++)
 		fprintf(fnu,"%0.5f,",avernu[k]);
-	fprintf(fnu,"%0.5f}\n",avernu[Nz]);
+	fprintf(fnu,"%0.5f}\n",avernu[Nz]);*/
 	//putting structural functions to file
 	struct_func(2,ind);
 	fprintf(fsf,"{%0.6f",s_func[0]);
@@ -338,6 +346,7 @@ void main()
 
   ns = 0;
 
+  //initial filling of arrays
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=0;k<=Nz+1;k++)
@@ -348,6 +357,7 @@ void main()
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
 				 nut[i][j][k]= 1./Re;
 				 }
+	fill_num_points();
 
 	fv = prepout("vv.dat");
 	fprintf(fv,"{");
@@ -397,4 +407,5 @@ void main()
 		printf("%g\n",vx[ns%2][Nx/2][Ny/2][k]);
 	putch(getch());
 	fclose(fv);
+	fclose(fsf);
 }//main
