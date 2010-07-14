@@ -12,13 +12,11 @@
 
 # define  Nx   10
 # define  Ny   10
-# define  Nz   11
+# define  Nz   10
 # define  EPS  1e-9
-# define STEP (0.0001*Re)
+# define STEP (1)
 # define uplevel 100000.
-# define Noise 0.01
-# define norm(a,b,c) (a*a+b*b+c*c)
-# define min_d min(min(dx,dy),dz)
+# define Noise 0.001
 //# define LEN (min(k,Nz+1-k)*dz)
 //# define LEN (min(k,Nz+1-k)*dz*sqrt(1-2.*min(k,Nz+1-k)/(Nz+1)))
 //#define LEN 1
@@ -32,16 +30,16 @@
  double p[2][Nx+2][Ny+2][Nz+2],
 		 nut[Nx+2][Ny+2][Nz+2];
 		 diver[Nx+1][Ny+1][Nz+1];
- double s_func[Nz+2][Nx/2+Ny/2+Nz];
- long num_points[Nx/2+Ny/2+Nz];
- double Re=100000000, gamma ;
+ double Re=10000, gamma ;
 
  double tm, dx,dy,dz, lx,ly,lz, tmmax,divmax ;
 
  double p1, p2;//pressure on the ends
 
- bool konez;
+ bool konez,rashod;
  FILE  *fv, *fnu, *fsf;
+
+#include "struct_func.cpp"
 
 FILE *prepout(char *x)  //opening of file to ff
 {
@@ -54,60 +52,6 @@ FILE *ff;
 return(ff);
 }
 
-/*void fill_num_points()//filling of number points array
-{
-int i,j,k,l,m,n,dist;
-double d;
-for(i=0;i<=Nx+Ny+Nz;i++) num_points[i] = 0;
-for(i=1;i<=Nx;i++)
-	for(j=1;j<=Ny;j++)
-		for(k=1;k<=Nz;k++)
-			for(l=0;l<=Nx-1;l++)
-				for(m=0;m<=Ny-1;m++)
-					for(n=0;n<=Nz-1;n++)
-						 {
-						 d = sqrt(l*l+m*m+n*n);
-						 d = (d>EPS)?d:1;
-						 d = log(d)*(Nx+Ny+Nz)/log(sqrt(Nx*Nx+Ny*Ny+Nz*Nz));
-						 //(per wave number add "minus")
-						 dist=floor(d+0.5);
-						 num_points[dist]++;
-						 }
-}//fill_num_points*/
-
-void struct_func(int q,int ind)//structural function of order q
-{
-long nn=ind;
-int i,j,k,l,m,n,dist;
-double d,rx,ry,rz;
-for(k=1;k<=Nz;k++)
-	{
-for(i=0;i<=Nx/2+Ny/2+Nz-1;i++) s_func[k][i] = num_points[i] = 0;
-	for(i=1;i<=Nx;i++)
-	for(j=1;j<=Ny;j++)
-			for(l=1;l<=Nx;l++)
-				for(m=1;m<=Ny;m++)
-					for(n=1;n<=Nz;n++)
-						 {
-						 if ((i==l)&&(j==m)&&(k==n)) continue;
-						 rx = min( abs(l-i),Nx-abs(l-i) )*dx;
-						 ry = min( abs(m-j),Nx-abs(m-j) )*dy;
-						 rz = abs(n-k)*dz;
-						 d = sqrt(rx*rx+ry*ry+rz*rz);
-						 d = 2*log(d/min_d)/log(2);
-						 //(per wave number add "minus")
-						 dist=floor(d);
-						 s_func[k][dist]+=pow(
-									norm(vx[nn][l][m][n]-vx[nn][i][j][k],
-										 vy[nn][l][m][n]-vy[nn][i][j][k],
-										 vz[nn][l][m][n]-vz[nn][i][j][k]),
-										 q/2.);
-						 num_points[dist]++;
-						 }
-for(i=0;i<=Nx/2+Ny/2+Nz-1&&num_points[i];i++)
-	s_func[k][i]=(s_func[k][i]/num_points[i]);
-	 }//"for" per layers
-}//struct_func
 
 void velocitybounder(int ind)  //boundary conditions on velocities
 {
@@ -202,12 +146,15 @@ void printing(int ind)
 		fprintf(fnu,"%0.5f,",avernu[k]);
 	fprintf(fnu,"%0.5f}\n",avernu[Nz]);*/
 	//putting structural functions to file
+rashod = (epsp>0.01);
+if(rashod)
+   {
 	struct_func(2,ind);
 	fprintf(fsf,"{%0.6f",s_func[1][0]);
 	for(k=1;k<=Nx/2+Ny/2+Nz-1&&num_points[k];k++)
 		fprintf(fsf,",%0.6f",s_func[1][k]);
 	fprintf(fsf,"}\n");
-
+   }
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
 			vxmax>uplevel || vymax>uplevel ||vzmax>uplevel)
@@ -351,7 +298,7 @@ void main()
 		for(k=0;k<=Nz+1;k++)
 				 {
 				 vx[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX
-								+ 1 - 4./Nz/Nz*(k-1-Nz/2)*(k-1-Nz/2);
+								+ 1 - 4./Nz/Nz*(k-(1+Nz)/2.)*(k-(1+Nz)/2.);
 				 vy[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 vz[0][i][j][k]=Noise*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
@@ -391,7 +338,7 @@ void main()
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
 		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-//	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
+	 if(rashod||((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP)))
 	 {
 	 printing((ns+1)%2);
 	 }
