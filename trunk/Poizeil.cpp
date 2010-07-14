@@ -4,20 +4,19 @@
 /*rending in Mathematics by string:
 ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
-
-//other structuring and Prandtl's models
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <conio.h>
 
-# define  Nx   4
-# define  Ny   4
-# define  Nz   60
+# define  Nx   10
+# define  Ny   10
+# define  Nz   30
 # define  EPS  1e-15
-# define len (min(k,Nz-k)*dz)
 
+# define  fz(z)  ((z<0.1)?(z)*sqrt(1-(z)/(lz/2.)):1)
+//# define  fz(z)  0.14-0.08*pow(1-(z)/(lz/2.),2)-0.06*pow(1-(z)/(lz/2.),4)
  double dt,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
@@ -238,7 +237,7 @@ void main()
 {
  long ns;
  int i,j,k;
- double mn=15;
+ double mn=100;
 
 /*============ Initial condition ==============*/
 
@@ -246,7 +245,7 @@ void main()
 
   tmmax=500.0;
   tm = 0;
-  dt = 1e-04;
+  dt = 1e-05;
 
   lx = 2; lz = ly= 1; dx = lx/Nx; dy = ly/Ny; dz=lz/Nz;
 
@@ -254,15 +253,17 @@ void main()
 
   p1 = 8*lx/(lz*Re) ; p2 = 0;
 
+//  mn= Re*(p2-p1)/lx*(1-coshl(ksi))/ksi/Re/2;
+
   ns = 0;
 
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=0;k<=Nz+1;k++)
 				 {
-				 vx[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vy[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vz[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vx[0][i][j][k]=0.001*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vy[0][i][j][k]=0.001*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vz[0][i][j][k]=0.001*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
 				 nut[i][j][k]= 1;
 				 }
@@ -275,47 +276,17 @@ void main()
 
 /*=================== Main block ====================================*/
 
-//initial iterations (Poizeil profil)
  konez=false;
 
 	while(tm<tmmax && ! konez)
-	{
-	 step_of_time(ns);
-	 divmax = 0;
-	  for(i=1;i<=Nx;i++)
-	 for(j=1;j<=Ny;j++)
-		 for(k=1;k<=Nz;k++)
-		 {
-		 diver[i][j][k] = (vx[ns%2][i+1][j][k]-vx[ns%2][i-1][j][k])/(2*dx)+
-				 (vy[ns%2][i][j+1][k]-vy[ns%2][i][j-1][k])/(2*dy)+
-				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
-		 divmax=max(divmax,(double)abs(diver[i][j][k]));
-		 }
-	 if(!(ns%100))
-	 {
-	 printing((ns+1)%2);
-	 }
-
-	  ns++;
-	  tm+=dt;
-	}
-
-	printf("\n the end of initial iterations, press any key to continue\n");
-	putch(getch());
-
-konez = false;
-
-//model of Prandtl iterations
-	while(tm<tmmax+(dop=0) && ! konez)
 	{
 	 step_of_time(ns);
 //correction nut in Prandtl model
   for(i=0;i<=Nx+1;i++)
 	for(j=0;j<=Ny+1;j++)
 		for(k=1;k<=Nz;k++)
-				 {
-				 nut[i][j][k]=1+mn*pow(len,2)*
-					abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
+			 nut[i][j][k]=1+mn*pow(fz(min(k,Nz-k)*dz),2)*abs((vx[(ns+1)%2][i][j][k+1]-vx[(ns+1)%2][i][j][k-1])/2/dz);
+
 	 divmax = 0;
 	  for(i=1;i<=Nx;i++)
 	 for(j=1;j<=Ny;j++)
