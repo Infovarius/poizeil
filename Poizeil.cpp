@@ -14,7 +14,7 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 
 # define  Nx   10
 # define  Ny   10
-# define  Nz   40
+# define  Nz   39
 # define  EPS  1e-9
 # define STEP 0.01
 //# define LEN (min(k,Nz-k)*dz)
@@ -97,6 +97,7 @@ void printing(int ind)
  int i,j,k;
  double epsp=0, epsvx=0, epsvy=0, epsvz= 0;
  double vxmax=0, vymax=0, vzmax= 0;
+ double avervx[Nz+2], avernu[Nz+2];
 
 		for(i=1;i<=Nx;i++)
 		  for(j=1;j<=Ny;j++)
@@ -114,18 +115,32 @@ void printing(int ind)
 				 if(epsp  < fabs(p[ind][i][j][k]-p[(ind+1)%2][i][j][k]))
 					 epsp  = fabs(p[ind][i][j][k]-p[(ind+1)%2][i][j][k]);
 			 }
+
+	for(k=1;k<=Nz;k++)
+		{
+		avervx[k] = avernu[k] = 0;
+		for(i=1;i<=Nx;i++)
+			for(j=1;j<=Ny;j++)
+				{
+				avervx[k] += vx[(ind+1)%2][i][j][k];
+				avernu[k] += nut[i][j][k];
+				}
+		avervx[k] /= Nx*Ny;
+		avernu[k] /= Nx*Ny;
+		}
+
 		 clrscr();
 		 printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
 		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
 	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fv,"%0.5g,",vx[(ind+1)%2][Nx/2][Ny/2][k]);
-	fprintf(fv,"%0.5g}\n",vx[(ind+1)%2][Nx/2][Ny/2][Nz]);
+		fprintf(fv,"%0.5g,",avervx[k]);
+	fprintf(fv,"%0.5g}\n",avervx[Nz]);
 
 	fprintf(fnu,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
-	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);
+		fprintf(fnu,"%0.5g,",avernu[k]);
+	fprintf(fnu,"%0.5g}\n",avernu[Nz]);
 
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
