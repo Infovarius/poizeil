@@ -1,13 +1,9 @@
-//working version:
-//gradient periodic condition+max v=1+print to file
+//reduced poizeil 1.10 (without Prandtl)
 
-/*rending in Mathematics by string:
-ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
-	  /@(l=ReadList["e:\\bc31\\mine\\vv.dat"]);*/
+//divergence under small Reynolds
 
-//other structuring and Prandtl's models
+//structural functions
 
-//corrected error with no-symmetric Nz-k (changed to Nz+1-k)
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -18,13 +14,14 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
 # define  Ny   10
 # define  Nz   30
 # define  EPS  1e-9
-# define STEP (0.001*Re)
+# define STEP (0.0001*Re)
+# define uplevel 100000.
 //# define LEN (min(k,Nz+1-k)*dz)
 //# define LEN (min(k,Nz+1-k)*dz*sqrt(1-2.*min(k,Nz+1-k)/(Nz+1)))
 //#define LEN 1
 
 
- double dt=1e-3,
+ double dt=6e-4,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
@@ -32,14 +29,16 @@ ListPlot[#,PlotJoined->True,PlotRange->{0,1}]&
  double p[2][Nx+2][Ny+2][Nz+2],
 		 nut[Nx+2][Ny+2][Nz+2];
 		 diver[Nx+1][Ny+1][Nz+1];
- double Re=100, gamma ;
+ double s_func[Nx+Ny+Nz];
+ long num_points[Nx+Ny+Nz];
+ double Re=1, gamma ;
 
  double tm, dx,dy,dz, lx,ly,lz, tmmax,divmax ;
 
  double p1, p2;//pressure on the ends
 
  bool konez;
- FILE  *fv,*fnu;
+ FILE  *fv, *fnu, *fsf;
 
 FILE *prepout(char *x)  //opening of file to ff
 {
@@ -51,6 +50,57 @@ FILE *ff;
 	 }
 return(ff);
 }
+
+double napr(double dqx,double dqy,double dqz,double nx,double ny,double nz)
+//scalar product of dq vector and guide vector n
+{
+double mod=sqrt(nx*nx+ny*ny+nz*nz);
+if(mod==0) return(0);
+		else return ((dqx*nx+dqy*ny+dqz*nz)/mod);
+}//napr
+
+void fill_num_points()//filling of number points array
+{
+int i,j,k,l,m,n,dist;
+for(i=0;i<=Nx+Ny+Nz;i++) num_points[i] = 0;
+for(i=1;i<=Nx;i++)
+	for(j=1;j<=Ny;j++)
+		for(k=1;k<=Nz;k++)
+			for(l=0;l<=Nx-1;l++)
+				for(m=0;m<=Ny-1;m++)
+					for(n=0;n<=Nz-1;n++)
+						 {
+						 dist=floor(sqrt(l*l+m*m+n*n)+0.5);
+						 num_points[dist]++;
+						 }
+}//fill_num_points
+
+void struct_func(int q,int ind)//structural function of order q
+{
+long nn=ind;
+int i,j,k,l,m,n,i_,j_,k_,dist;
+for(i=0;i<=Nx+Ny+Nz;i++)  s_func[i] =  0;
+for(i=1;i<=Nx;i++)
+	for(j=1;j<=Ny;j++)
+		for(k=1;k<=Nz;k++)
+			for(l=0;l<=Nx-1;l++)
+				for(m=0;m<=Ny-1;m++)
+					for(n=0;n<=Nz-1;n++)
+						 {
+						 dist=floor(sqrt(l*l+m*m+n*n)+0.5);
+						 i_=(i+l)%Nx+1;
+						 j_=(j+m)%Ny+1;
+						 k_=(k+n)%Nz+1;
+						 s_func[dist]+=pow(napr(vx[nn][i_][j_][k_]-vx[nn][i][j][k],
+										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
+										 vz[nn][i_][j_][k_]-vz[nn][i][j][k],
+										 vx[nn][i_][j_][k_]-vx[nn][i][j][k],
+										 vy[nn][i_][j_][k_]-vy[nn][i][j][k],
+										 vz[nn][i_][j_][k_]-vz[nn][i][j][k]),q);
+						 }
+for(i=0;i<=Nx+Ny+Nz;i++)
+	if(num_points[i]) s_func[i]=(s_func[i]/num_points[i]);
+}//struct_func
 
 void velocitybounder(int ind)  //boundary conditions on velocities
 {
@@ -97,7 +147,7 @@ int i,j,k;
 void printing(int ind)
 {
  int i,j,k;
- double epsp=0, epsvx=0, epsvy=0, epsvz= 0;
+ double epsp=0, epsvx=0, epsvy=0, epsvz=0;
  double vxmax=0, vymax=0, vzmax= 0;
  double avervx[Nz+2], avernu[Nz+2];
 
@@ -134,22 +184,29 @@ void printing(int ind)
 		 clrscr();
 		 printf("\r %9f    %e %e %e %e\n",tm,epsp,epsvx,epsvy,epsvz);
 		 printf("              %e %e %e %e\n",vxmax,vymax,vzmax,divmax);
+	//putting velocities to file
 	fprintf(fv,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fv,"%0.5g,",avervx[k]);
-	fprintf(fv,"%0.5g}\n",avervx[Nz]);
-
+		fprintf(fv,"%0.5f,",avervx[k]);
+	fprintf(fv,"%0.5f}\n",avervx[Nz]);
+	//putting viscosities to file
 	fprintf(fnu,"{");
 	for(k=1;k<=Nz-1;k++)
-		fprintf(fnu,"%0.5g,",avernu[k]);
-	fprintf(fnu,"%0.5g}\n",avernu[Nz]);
+		fprintf(fnu,"%0.5f,",avernu[k]);
+	fprintf(fnu,"%0.5f}\n",avernu[Nz]);
+	//putting structural functions to file
+	struct_func(2,ind);
+	fprintf(fsf,"{%0.6f",s_func[0]);
+	k=1;
+	while(num_points[k++]) fprintf(fsf,",%0.6f",s_func[k]);
+	fprintf(fsf,"}\n");
 
 	 if(kbhit()&&getch()=='q') konez=true;
 	 if(epsvx<EPS && epsvy<EPS && epsvz<EPS ||
-			vxmax>100.0 || vymax>100.0 ||vzmax>100.0)
+			vxmax>uplevel || vymax>uplevel ||vzmax>uplevel)
 			konez=true;
 
- }    //printing
+} //printing
 
 void step_of_time(int ns)      //one of the time steps of calculation
 
@@ -259,7 +316,7 @@ velocitybounder(n1);
 		 vz[n1][i][j][k] -= dt*(p[n1][i][j][k+1]-p[n1][i][j][k-1])/(2*dz);
 			  }
 
-  }  //step_of_time
+}  //step_of_time
 
 /*=========================================================================*/
 
@@ -285,9 +342,9 @@ void main()
 	for(j=0;j<=Ny+1;j++)
 		for(k=0;k<=Nz+1;k++)
 				 {
-				 vx[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vy[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
-				 vz[0][i][j][k]=0.01*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vx[0][i][j][k]=0.0*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vy[0][i][j][k]=0.0*((double)rand()-RAND_MAX/2)/RAND_MAX;
+				 vz[0][i][j][k]=0.0*((double)rand()-RAND_MAX/2)/RAND_MAX;
 				 p[0][i][j][k] = p1+(i-0.5)*(p2-p1)/Nx;
 				 nut[i][j][k]= 1./Re;
 				 }
@@ -303,6 +360,8 @@ void main()
 	for(k=1;k<=Nz-1;k++)
 		fprintf(fnu,"%0.5g,",nut[Nx/2][Ny/2][k]);
 	fprintf(fnu,"%0.5g}\n",nut[Nx/2][Ny/2][Nz]);
+
+	fsf = prepout("strfunc.dat");
 
 /*=================== Main block ====================================*/
 
@@ -322,7 +381,7 @@ void main()
 				 (vz[ns%2][i][j][k+1]-vz[ns%2][i][j][k-1])/(2*dz);
 		 divmax=max(divmax,fabs(diver[i][j][k]));
 		 }
-	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
+//	 if((int)((tm+dt/2)/STEP)-(int)((tm-dt/2)/STEP))
 	 {
 	 printing((ns+1)%2);
 	 }
