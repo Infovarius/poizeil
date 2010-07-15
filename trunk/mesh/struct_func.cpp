@@ -1,25 +1,23 @@
-# define  Nx   30
+/*# define  Nx   30
 # define  Ny   30
 # define  Nz   30
-# define Noise 0.0
-#include <stdlib.h>
-#include <math.h>
-#include <stdio.h>
-double dx,dy,dz,lx,ly,lz,
+# define Noise 0.001
+*/
+
+# include "mesh.h"
+# include "vars.h"
+extern double lx,ly,lz,
 		 vx[2][Nx+2][Ny+2][Nz+2],
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
+extern FILE *fsf;
 
-FILE *fsf;
+# define IND Nx/2+Ny/2+Nz
+# include "macros.h"
+extern double s_func[Nz+2][IND];
+extern  long num_points[IND];
 
-
-# define norm(a,b,c) ((a)*(a)+(b)*(b)+(c)*(c))
-# define min_d min(min(dx,dy),dz)
-
- double s_func[Nz+2][Nx/2+Ny/2+Nz];
- long num_points[Nx/2+Ny/2+Nz];
-
-FILE *prepout(char *x)  //opening of file to ff
+/*FILE *prepout(char *x)  //opening of file to ff
 {
 FILE *ff;
   if ((ff = fopen (x,"w+"))==NULL)
@@ -28,7 +26,7 @@ FILE *ff;
 		exit(-1);
 	 }
 return(ff);
-}
+} */
 
 
 void struct_func(int q,int ind)//structural function of order q
@@ -36,9 +34,9 @@ void struct_func(int q,int ind)//structural function of order q
 long nn=ind;
 int i,j,k,l,m,n,dist;
 double d,rx,ry,rz;
-for(k=1;k<=Nz;k+=1)
+for(k=1;k<=Nz;k+=10)
 	{
-for(i=0;i<=Nx/2+Ny/2+Nz-1;i++) s_func[k][i] = num_points[i] = 0;
+for(i=0;i<=IND-1;i++) s_func[k][i] = num_points[i] = 0;
 	for(i=1;i<=Nx;i++)
 	for(j=1;j<=Ny;j++)
 			for(l=1;l<=Nx;l++)
@@ -47,7 +45,7 @@ for(i=0;i<=Nx/2+Ny/2+Nz-1;i++) s_func[k][i] = num_points[i] = 0;
 						 {
 						 if ((i==l)&&(j==m)&&(k==n)) continue;
 						 rx = min( abs(l-i),Nx-abs(l-i) )*dx;
-						 ry = min( abs(m-j),Ny-abs(m-j) )*dy;
+						 ry = min( abs(m-j),Nx-abs(m-j) )*dy;
 						 rz = abs(n-k)*dz;
 						 d = sqrt(rx*rx+ry*ry+rz*rz);
 						 d = 2*log(d/min_d)/log(2);
@@ -60,19 +58,19 @@ for(i=0;i<=Nx/2+Ny/2+Nz-1;i++) s_func[k][i] = num_points[i] = 0;
 										 q/2.);
 						 num_points[dist]++;
 						 }
-for(i=0;i<=Nx/2+Ny/2+Nz-1&&num_points[i];i++)
+for(i=0;i<=IND-1&&num_points[i];i++)
 	s_func[k][i]=(s_func[k][i]/num_points[i]);
-for(i=0;i<=Nx/2+Ny/2+Nz-1&&num_points[i];i++)
+for(i=0;i<=IND-1&&num_points[i];i++)
 	printf("%0.5f;",s_func[k][i]);
 printf("\n");
 fprintf(fsf,"{%0.6f",s_func[k][0]);
-for(i=1;i<=Nx/2+Ny/2+Nz-1&&num_points[i];i++)
+for(i=1;i<=IND-1&&num_points[i];i++)
 	fprintf(fsf,",%0.6f",s_func[k][i]);
 fprintf(fsf,"}\n");
 	 }//"for" per layers
 }//struct_func
 
-void main()
+/*void main()
 {
 
 fsf = prepout("strfunc.dat");
@@ -94,4 +92,4 @@ long i,j,k;
 	 struct_func(2,0);
 //fprintf(fsf,"}");
 fclose(fsf);
- }
+ }*/
