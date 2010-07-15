@@ -1,9 +1,3 @@
-/*# define  Nx   30
-# define  Ny   30
-# define  Nz   30
-# define Noise 0.001
-*/
-
 # include "mesh.h"
 # include "vars.h"
 extern double lx,ly,lz,
@@ -11,23 +5,7 @@ extern double lx,ly,lz,
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
 extern FILE *fsf;
-
 # define IND Nx/2+Ny/2+Nz
-# include "macros.h"
-extern double s_func[Nz+2][IND];
-extern  long num_points[IND];
-
-/*FILE *prepout(char *x)  //opening of file to ff
-{
-FILE *ff;
-  if ((ff = fopen (x,"w+"))==NULL)
-	 {
-		printf ("Can't open file %s !\n",x);
-		exit(-1);
-	 }
-return(ff);
-} */
-
 
 void struct_func(int q,int ind)//structural function of order q
 {
