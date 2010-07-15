@@ -5,7 +5,11 @@ extern double lx,ly,lz,
 		 vy[2][Nx+2][Ny+2][Nz+2],
 		 vz[2][Nx+2][Ny+2][Nz+2];
 extern FILE *fsf;
+
 # define IND Nx/2+Ny/2+Nz
+# include "macros.h"
+extern double s_func[Nz+2][IND];
+extern  long num_points[IND];
 
 void struct_func(int q,int ind)//structural function of order q
 {
