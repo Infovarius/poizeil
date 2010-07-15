@@ -3,9 +3,10 @@
 <PROJECT>
   <MACROS>
     <VERSION value="BCB.05.03"/>
-    <PROJECT value="..\exeobj\MeshApp.exe"/>
-    <OBJFILES value="..\exeobj\kaskad+flux.obj ..\exeobj\struct_func.obj 
-      ..\exeobj\integrating.obj"/>
+    <PROJECT value="..\exeobj\MAIN.exe"/>
+    <OBJFILES value="..\exeobj\MAIN.obj ..\exeobj\CONSTANT.obj ..\exeobj\STRUCTUR.obj 
+      ..\exeobj\init.obj ..\exeobj\process.obj ..\exeobj\printing.obj 
+      ..\exeobj\integrating.obj ..\exeobj\model.obj"/>
     <RESFILES value=""/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -14,11 +15,9 @@
     <LIBFILES value=""/>
     <LIBRARIES value=""/>
     <SPARELIBS value=""/>
-    <PACKAGES value="Vcl50.bpi Vclx50.bpi bcbsmp50.bpi Vcldb50.bpi vclado50.bpi ibsmp50.bpi 
-      VCLBDE50.bpi vcldbx50.bpi Qrpt50.bpi TeeUI50.bpi TeeDB50.bpi Tee50.bpi 
-      Dss50.bpi TeeQR50.bpi VCLIB50.bpi Vclmid50.bpi vclie50.bpi Inetdb50.bpi 
-      Inet50.bpi NMFast50.bpi webmid50.bpi bcbie50.bpi dclocx50.bpi 
-      bcb2kaxserver50.bpi"/>
+    <PACKAGES value="VCL50.bpi VCLX50.bpi bcbsmp50.bpi VCLDB50.bpi VCLADO50.bpi VCLBDE50.bpi 
+      VCLDBX50.bpi TEEUI50.bpi TEEDB50.bpi TEE50.bpi DSS50.bpi TEEQR50.bpi 
+      VCLIB50.bpi VCLMID50.bpi bcbie50.bpi dclocx50.bpi"/>
     <PATHCPP value=".;"/>
     <PATHPAS value=".;"/>
     <PATHRC value=".;"/>
@@ -27,14 +26,15 @@
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="tlink32"/>
     <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="NO_STRICT;_NO_VCL;_RTLDLL;USEPACKAGES"/>
-    <MAINSOURCE value="MeshApp.bpf"/>
-    <INCLUDEPATH value="$(BCB)\include;$(BCB)\include\vcl"/>
-    <LIBPATH value="$(BCB)\lib\obj;$(BCB)\lib"/>
+    <SYSDEFINES value="NO_STRICT;_NO_VCL"/>
+    <MAINSOURCE value="DIVMESH.bpf"/>
+    <INCLUDEPATH value="D:\CBuilder5\Bin\;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="D:\CBuilder5\Bin\;$(BCB)\lib\obj;$(BCB)\lib"/>
     <WARNINGS value="-w-par"/>
   </MACROS>
   <OPTIONS>
-    <IDLCFLAGS value="-I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa"/>
+    <IDLCFLAGS value="-ID:\CBuilder5\Bin\. -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp 
+      -D_DEBUG -boa"/>
     <CFLAG1 value="-Od -H=$(BCB)\lib\vcl50.csm -Hc -Vx -Ve -X- -r- -a8 -b- -k -y -v -vi- -tWC 
       -tWM -c"/>
     <PFLAGS value="-N2..\exeobj -N0..\exeobj -$YD -$W -$O- -v -JPHNE -M"/>
@@ -43,9 +43,9 @@
     <LFLAGS value="-I..\exeobj -D&quot;&quot; -ap -Tpe -x -Gn -v"/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0x32.obj $(PACKAGES) $(OBJFILES)"/>
+    <ALLOBJ value="c0x32.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
-    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cw32mti.lib"/>
+    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cw32mt.lib"/>
   </LINKER>
   <IDEOPTIONS>
 [Version Info]
@@ -75,13 +75,22 @@ ProductName=
 ProductVersion=1.0.0.0
 Comments=
 
+[Excluded Packages]
+C:\WINDOWS\SYSTEM\ibsmp50.bpl=Borland C++ InterBase Alerter Component
+$(BCB)\Bin\dclqrt50.bpl=QuickReport Components
+$(BCB)\Bin\dclnet50.bpl=Borland Internet Components
+$(BCB)\Bin\DBWEBXPRT.BPL=Borland Web Wizard Package
+$(BCB)\Bin\DCLNMF50.bpl=NetMasters Fastnet Tools
+$(BCB)\Bin\dclwbm50.bpl=Borland InternetExpress Components
+$(BCB)\Bin\bcb2kaxserver50.bpl=Borland C++Builder COM Server Components Sample Package
+
 [HistoryLists\hlIncludePath]
 Count=1
-Item0=$(BCB)\include;$(BCB)\include\vcl
+Item0=D:\CBuilder5\Bin;$(BCB)\include;$(BCB)\include\vcl
 
 [HistoryLists\hlLibraryPath]
 Count=1
-Item0=$(BCB)\lib\obj;$(BCB)\lib
+Item0=D:\CBuilder5\Bin;$(BCB)\lib\obj;$(BCB)\lib
 
 [HistoryLists\hlDebugSourcePath]
 Count=1
@@ -92,15 +101,12 @@ Count=1
 Item0=_DEBUG
 
 [HistoryLists\hlIntOutputDir]
-Count=2
-Item0=D:\Home\anton\exeobj
-Item1=$(BCB)\mine\obj
+Count=1
+Item0=D:\BC31\MINE\exeobj
 
 [HistoryLists\hlFinalOutputDir]
-Count=3
-Item0=D:\Home\anton\exeobj
-Item1=d:\cbuilder5\mine\exe\
-Item2=$(BCB)\mine\exe
+Count=1
+Item0=D:\BC31\MINE\exeobj
 
 [Debugging]
 DebugSourceDirs=$(BCB)\source\vcl
@@ -115,5 +121,16 @@ RemoteDebug=0
 [Compiler]
 ShowInfoMsgs=0
 LinkDebugVcl=0
+LinkCGLIB=0
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
   </IDEOPTIONS>
 </PROJECT>
